@@ -1,8 +1,8 @@
 /*----------------------------------------------------------------------------*/
 /*                                                                            */
 /*    Module:       vex.h                                                     */
-/*    Author:       Richard Wang                                              */
-/*    Created:      July 11 2022                                                */
+/*    Author:       Vex Robotics                                              */
+/*    Created:      August 2, 2022                                               */
 /*    Description:  Default header for V5 projects                            */
 /*                                                                            */
 /*----------------------------------------------------------------------------*/

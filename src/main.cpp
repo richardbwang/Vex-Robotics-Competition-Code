@@ -2,34 +2,46 @@
 /*                                                                            */
 /*    Module:       main.cpp                                                  */
 /*    Author:       Richard Wang                                              */
-/*    Created:      July 11 2022                                           */
-/*    Description:  Competition Template                                      */
+/*    Created:      Thu August 2, 2022                                        */
+/*    Description:  V1 code for 08/12 signature event using                   */
+/*                  competition template.                                     */
 /*                                                                            */
 /*----------------------------------------------------------------------------*/
 
 // ---- START VEXCODE CONFIGURED DEVICES ----
 // Robot Configuration:
 // [Name]               [Type]        [Port(s)]
-// Controller1          controller
-// leftintake_motor     motor         6
-// left_chassis1        motor         4
-// right_chassis1       motor         3
-// LimitSwitchA         limit         A
-// lift_down            motor         8
-// righttintake_motor   motor         7
-// left_chassis2        motor         2
-// right_chassis2       motor         1
-// xi_motor             motor         5
+// Controller1          controller                    
+// left_fw_motor        motor         5               
+// left_chassis1        motor         3               
+// right_chassis1       motor         2               
+// LimitSwitchA         limit         A               
+// lift_down            motor         9               
+// right_fw_motor       motor         8               
+// left_chassis2        motor         4               
+// right_chassis2       motor         1               
+// grab_motor           motor         6               
+// InertialA            inertial      10              
+// VisionA              vision        19              
+// Vision7              vision        7               
 // ---- END VEXCODE CONFIGURED DEVICES ----
+
 #include "vex.h"
-#include "auto.h"
-#include "math.h"
 #include "motor-control.h"
+#include "math.h"
+#include "auto.h"
+
+#include <cstdio>
+#include <iostream>
+#include <iomanip>
+#include <fstream>
 
 using namespace vex;
 
 // A global instance of competition
 competition Competition;
+
+std::ofstream ofs;
 
 // define your global instances of motors and other devices here
 
@@ -46,12 +58,17 @@ competition Competition;
 void pre_auton(void) {
   // Initializing Robot Configuration. DO NOT REMOVE!
   vexcodeInit();
-  // Inertial.calibrate();
-  // waitUntil(!Inertial.isCalibrating());
-  // Inertial.resetRotation();
-
-  // All activities that occur before the competition starts
-  // Example: clearing encoders, setting servo positions, ...
+  float point;
+  point = (InertialA.heading(degrees));
+  //Brain.Screen.print("Point : %f\n", point);
+  // Initializing Robot Configuration
+  vexcodeInit();
+  //calibrate inertial sensor
+  InertialA.calibrate();
+  // waits for the Inertial Sensor to calibrate
+  while (InertialA.isCalibrating()) {
+    wait(100, msec);
+  }
 }
 
 /*---------------------------------------------------------------------------*/
@@ -65,70 +82,54 @@ void pre_auton(void) {
 /*---------------------------------------------------------------------------*/
 
 void autonomous(void) {
-  //Starting to move and turning to roller
-  ChassisControl(75, 75);
-  wait(250, msec);
-  ChassisControl(0, 0);
-  wait(600, msec);
-  ChassisControl(-50, 75);
-  wait(330, msec);
-  ChassisControl(25, 25);
-  wait(200, msec);
-
-  //Spinning the roller and starting the flywheel
-  xi(-100);
-  intake(75, 75);
-  wait(600, msec);
-  ChassisControl(0, 0);
-  ChassisControl(-50, -70);
-  wait(45, msec);
-  ChassisControl(0, 0);
-  xi(0);
-  wait(1000, msec);
-
-  //Shooting first two discs into high goal
-  wait(200, msec);
-  for (int i = 0; i < 3; ++i) {
-    liftDown(100);
-    wait(100, msec);
-    liftDown(-50);
-    wait(150, msec);
-    liftDown(0);
-    wait(400, msec);
-  }
-  intake(0, 0);
-
-  //Picking up three dics
-  ChassisControl(-50, 50);
-  wait(300, msec);
-  ChassisControl(100, 100);
-  wait(25, msec);
-  ChassisControl(-50, 50);
-  wait(390, msec);
-  ChassisControl(50, 50);
-  xi(-100);
-  wait(2250, msec);
-  ChassisControl(-100, -100);
+  fw_rpm(74, 74);
+  DriveFor(25.5, 1750);
+  wait(100, msec);
+  TurnForAngle(90, 800);
+  ChassisControl(40, 40);
   wait(500, msec);
-  ChassisControl(0, 0);
+  ChassisControl(25, 25);
+  grab(-100);
   wait(250, msec);
-  ChassisControl(75, -75);
-  wait(255, msec);
   ChassisControl(0, 0);
-
-  //Shooting discs into high goal
-  intake(65, 65);
-  wait(2000, msec);
-  for (int i = 0; i < 4; ++i) {
+  grab(0);
+  wait(500, msec);
+  TurnForAngle(10, 500);
+  wait(100, msec);
+  for(int i = 0; i < 2; i++) {
     liftDown(100);
     wait(100, msec);
     liftDown(-50);
-    wait(150, msec);
+    wait(100, msec);
     liftDown(0);
-    wait(400, msec);
+    lift_down.resetRotation();
+    for(int i = 0; i < 10; i++) {
+      fw_pid_rpm_with_time_limit(75, 75, 200);
+    }
+    wait(1000, msec);
   }
-  intake(0, 0);
-  xi(0);
+  fw(0, 0);
+  TurnForAngle(136, 750);
+  grab(-100);
+  DriveFor(45, 2000);
+  DriveFor(28, 1100);
+  ChassisControl(0, 0);
+  TurnForAngle(-94, 800);
+  fw_pid_rpm_with_time_limit(55, 55, 1000);
+  fw_rpm(53, 53);
+  wait(500, msec);
+  for(int i = 0; i < 4; i++) {
+    liftDown(100);
+    wait(100, msec);
+    liftDown(-50);
+    wait(100, msec);
+    liftDown(0);
+    lift_down.resetRotation();
+    for(int i = 0; i < 5; i++) {
+      fw_pid_rpm_with_time_limit(71, 71, 200);
+    }
+    wait(1000, msec);
+  }
 }
 
 /*---------------------------------------------------------------------------*/
@@ -141,22 +142,32 @@ void autonomous(void) {
 /*  You must modify the code to add your own robot specific commands here.   */
 /*---------------------------------------------------------------------------*/
 
-int Ch1, Ch2, Ch3, Ch4;                                              //声明
-bool L1, L2, R1, R2, BtnA, BtnB, BtnX, BtnY, BtnU, BtnD, BtnL, BtnR; //声明
-int intake_flag = 0, intake_flag1 = 0;
-int lift_flag = 0, lift_flag1 = 0;
-int intake_time = 0;
-int fly_flag = 0, fly_flag1 = 0;
-int long_fly_flag = 0, long_fly_flag1 = 0;
-int rum_flag = 0;
-int i = 471;
-int last_s_l = 0, last_s_r = 0;
-void usercontrol(void) {
+// Controller axises, Ch1: Axis1, Ch2: Axis2, Ch3: Axis3, Ch4: Axis4
+int Ch1, Ch2, Ch3, Ch4;
 
+// Controller buttons
+bool L1, L2, R1, R2, BtnA, BtnB, BtnX, BtnY, BtnU, BtnD, BtnL, BtnR; 
+
+// Flags for flying wheels.
+int fw_flag = 0, fw_flag1 = 0;
+int fw_time = 0;
+
+// Flags for push bar.
+int lift_flag = 0, lift_flag1 = 0;
+
+// Flags for shooting, either short or log distance.
+int fly_flag = 0 , fly_flag1 = 0;
+int long_fly_flag = 0,long_fly_flag1 = 0;
+
+int i=471;
+int last_s_l=0, last_s_r = 0;
+
+void usercontrol(void) {   
   // User control code here, inside the loop
-  while (1) {
+  // Brain.Screen.clearScreen(black);
+  while (true) {
     //{
-    // int Brain_time_111=Brain.timer(msec);
+      //int Brain_time_111=Brain.timer(msec);
     // This is the main execution loop for the user control program.
     // Each time through the loop your program should update motor + servo
     // values based on feedback from the joysticks.
@@ -165,200 +176,230 @@ void usercontrol(void) {
     // Insert user code here. This is where you use the joystick values to
     // update your motors, etc.
     // ........................................................................
-    // User control code here, inside the loop
-
+     // User control code here, inside the loop
+    
+    // Get the current values from joysticks and all buttons. 
+    // We mianly use Ch3 and Ch4 for controlling the robot movement.
     Ch1 = Controller1.Axis1.value();
     Ch2 = Controller1.Axis2.value();
     Ch3 = Controller1.Axis3.value();
     Ch4 = Controller1.Axis4.value();
+    
     L1 = Controller1.ButtonL1.pressing();
     L2 = Controller1.ButtonL2.pressing();
+    
     R1 = Controller1.ButtonR1.pressing();
     R2 = Controller1.ButtonR2.pressing();
-    BtnA = Controller1.ButtonA.pressing();
-    BtnB = Controller1.ButtonB.pressing();
+    
+    BtnB = Controller1.ButtonA.pressing();
+    BtnA = Controller1.ButtonB.pressing();
     BtnX = Controller1.ButtonX.pressing();
     BtnY = Controller1.ButtonY.pressing();
     BtnU = Controller1.ButtonUp.pressing();
     BtnD = Controller1.ButtonDown.pressing();
     BtnL = Controller1.ButtonLeft.pressing();
     BtnR = Controller1.ButtonRight.pressing();
+    
     //=========================================================================
-    Brain.Screen.setCursor(1, 1);
-    Brain.Screen.print(leftintake_motor.velocity(rpm));
-    Brain.Screen.newLine();
-    Brain.Screen.print(righttintake_motor.velocity(rpm));
-    Brain.Screen.newLine();
-
-    //=========================================================================
-    if (abs(Ch4) < 5 &&
-        abs(Ch3) > 10)
-    {
-      ChassisControl(Ch3, Ch3);
-    } else if (abs(Ch4) > 5 && (intake_flag == 1 || BtnA)) {
-      ChassisControl((Ch3 - Ch4) * 0.5, (Ch3 + Ch4) * 0.35);
-    } else if (abs(Ch4) > 5)
-    {
-      ChassisControl((Ch3 - Ch4) * 0.65, (Ch3 + Ch4) * 0.65);
+    // Control the moving direction while allowing certain percentage noices.
+    if(abs(Ch4) < 5 && abs(Ch3) > 10 ) {
+      // Go straight. 5 is the threshold for ignoring the turning signal. 
+      // 10 is the threshold for go straight.
+      ChassisControl(Ch3 ,  Ch3 );
+    } else if(abs(Ch4) > 5) {
+      // Turn if the Ch4 signal is over the threshold.
+      if (fw_flag == 1 || BtnB || BtnA) {
+        // Slow the turn since we are about to shoot.
+        ChassisControl((Ch3 - Ch4) * 0.5, (Ch3 + Ch4) * 0.35);
+      } else {
+        // Turn normally.
+        ChassisControl((Ch3 - Ch4) * 0.65, (Ch3 + Ch4) * 0.65 );
+      }
     } else {
+      // No operation from the joystick, stop using the coast mode.
       Stop(coast);
     }
-
-    if (BtnX && fly_flag1 == 0 && fly_flag == 0) {
+      
+    if(BtnX && fly_flag1 == 0 && fly_flag == 0) {
       fly_flag = 1;
       fly_flag1 = 1;
-    } else if (BtnX && fly_flag1 == 0 && fly_flag == 1) {
+    } else if(BtnX && fly_flag1 == 0 && fly_flag == 1) {
       fly_flag = 0;
       fly_flag1 = 1;
-    } else if (!BtnX) {
+    } else if(!BtnX) {
       fly_flag1 = 0;
     }
 
-    if (BtnY && long_fly_flag1 == 0 && long_fly_flag == 0) {
+    /*if(BtnY && long_fly_flag1 == 0 && long_fly_flag == 0) {
       long_fly_flag = 1;
       long_fly_flag1 = 1;
-    } else if (BtnY && long_fly_flag1 == 0 && long_fly_flag == 1) {
+    } else if(BtnY && long_fly_flag1 == 0 && long_fly_flag == 1) {
       long_fly_flag = 0;
       long_fly_flag1 = 1;
-    } else if (!BtnY) {
+    } else if(!BtnY) {
       long_fly_flag1 = 0;
+    }*/
+
+    if(BtnY) {
+      AimingGoal();
     }
-    if (BtnA) {
+    
+    // BtnB will shot continueously
+    if(BtnB) {
       fly_flag = 0;
-      intake_pid(70, 70); /////////////////////////////
-      if (leftintake_motor.velocity(rpm) >= 0 * 600 &&
-          righttintake_motor.velocity(rpm) >= 0 * 600 && intake_flag1 == 0) {
-        intake_flag = 1;
-        intake_flag1 = 1;
+      fw_pid_rpm_with_time_limit(54.2, 45, 1);
+
+      if(fw_flag1 == 0) {
+        fw_flag = 1;
+        fw_flag1 = 1;
       }
-      if (intake_flag == 1 && lift_flag1 == 0) {
-        intake_time = Brain.timer(msec);
+      
+      if(fw_flag == 1 && lift_flag1 == 0) {
+        fw_time = Brain.timer(msec);
         lift_flag1 = 1;
       }
-      if (intake_flag == 1 && Brain.timer(msec) - intake_time < 1) {
+
+      if(fw_flag == 1 && Brain.timer(msec) - fw_time < 1) {
         liftDown(100);
-      } else if (LimitSwitchA.pressing() == 0) {
+        fw_pid_rpm_with_time_limit(50, 50, 200);
+      } else if(LimitSwitchA.pressing() == 0) {
         liftDown(-50);
         lift_flag = 1;
       }
-      if (LimitSwitchA.pressing() == 1 && lift_flag == 1) {
-        intake_flag = 0;
-        intake_flag1 = 0;
+
+      if(LimitSwitchA.pressing() == 1 && lift_flag == 1) {
+        fw_flag = 0;
+        fw_flag1 = 0;
         lift_flag = 0;
         lift_flag1 = 0;
-        intake_time = 0;
+        fw_time = 0;
         lift_down.resetRotation();
         liftDown(0);
       }
     }
+        
     //========================================================
-    if (fly_flag == 1 && !BtnA) {
-      intake_pid(70, 70); ////////////////////
+    if(fly_flag == 1 && !BtnB) {
+      fw_pid_rpm_with_time_limit(61.2, 50, 1);
       long_fly_flag = 0;
-    } else if (long_fly_flag == 1)
-    {
-      intake_pid(120, 120);
+    } else if(long_fly_flag == 1) {
+      fw_rpm(70, 70);
       fly_flag = 0;
-    } else if (BtnD) {
-      intake(-50, -50);
-    } else if (!BtnA && fly_flag == 0 && long_fly_flag == 0) {
-      intake(0, 0);
+    } else if(BtnD) {
+      fw(-50, -50);
+    } else if(!BtnB && fly_flag == 0 && long_fly_flag == 0) {
+      fw(0, 0);
+    }  
+      
+    // Single shot
+    if(BtnA && !BtnB) { 
+      // Stablize the motor speed first for single shot.
+      fw_rpm(70, 70);
+      liftDown(100);
     }
 
-    //===============================
-
-    //
-    //========================================================
-    if (BtnB && !BtnA) {
-      if (lift_down.rotation(deg) < 20) {
-        liftDown(100);
-      } else {
-        lift_down.stop(brake);
-      }
-    }
-
-    if (!BtnB && LimitSwitchA.pressing() == 0 && !BtnA) {
-      liftDown(-20);
-    } else if (!BtnB && !BtnA) {
-      intake_flag = 0;
-      intake_flag1 = 0;
+    if(!BtnA && LimitSwitchA.pressing() == 0 && !BtnB) {
+      liftDown(-25);
+    } else if(!BtnA && !BtnB) {
+      fw_flag = 0;
+      fw_flag1 = 0;
       lift_flag = 0;
       lift_flag1 = 0;
-      intake_time = 0;
+      fw_time = 0;
       lift_down.resetRotation();
       liftDown(0);
     }
 
     //========================================================
-    if (R1) {
-      xi(100);
-    } else if (R2) {
-      xi(-100);
+    if(R1) {
+      grab(100);
+    } else if(R2) {
+      grab(-100);
     } else {
-      xi(0);
+      grab(0);
     }
-
-    if ((fly_flag == 1 && rum_flag == 0 &&
-         leftintake_motor.velocity(rpm) >= 0.4 * 600 &&
-         righttintake_motor.velocity(rpm) >= 0.75 * 600) ||
-        (long_fly_flag == 1 && rum_flag == 0 &&
-         leftintake_motor.velocity(rpm) >= 0.65 * 600 &&
-         righttintake_motor.velocity(rpm) >= 1 * 600)) {
-      Controller1.rumble(rumblePulse);
-      rum_flag = 1;
-    } else if (fly_flag == 0) {
-      rum_flag = 0;
-    }
-    //=======================================================================
-    if (fly_flag == 1 || BtnA || long_fly_flag == 1) {
-
-      if (i >= 470) {
+    
+    if(fly_flag == 1 || BtnB || long_fly_flag == 1 ) {
+      if(i >= 470) {
         Brain.Screen.clearScreen(black);
         Brain.Screen.setPenColor(white);
-        Brain.Screen.drawLine(20, 1, 20, 230);
-        Brain.Screen.drawLine(20, 230, 272, 230);
+        Brain.Screen.drawLine(20,1,20,230);
+        Brain.Screen.drawLine(20,230,272,230);
         Brain.Screen.setPenColor(blue);
-        Brain.Screen.drawLine(211, 20, 220, 20);
-        Brain.Screen.printAt(221, 20, ":左");
+        Brain.Screen.drawLine(211,20,220,20);
+        Brain.Screen.printAt(221, 20, ":LEFT");
         Brain.Screen.setPenColor(green);
-        Brain.Screen.drawLine(231, 20, 240, 20);
-        Brain.Screen.printAt(241, 20, ":右");
-        i = 0;
+        Brain.Screen.drawLine(231,20,240,20);
+        Brain.Screen.printAt(241, 20, ":RIGHT");
+        i=0;
       } else {
         Brain.Screen.setPenColor(red);
-        Brain.Screen.drawLine(i + 20, 220 - leftintake_motor.velocity(rpm) / 3,
-                              i + 20, 220 - last_s_l / 3);
+        Brain.Screen.drawLine(i + 20, 220-left_fw_motor.velocity(rpm) / 3,i + 20, 220- last_s_l / 3);
+
         Brain.Screen.setPenColor(green);
-        Brain.Screen.drawLine(i + 20, 30 + righttintake_motor.velocity(rpm) / 3,
-                              i + 20, 30 + last_s_r / 3);
+        Brain.Screen.drawLine(i + 20, 30 + right_fw_motor.velocity(rpm) / 3, i + 20, 30 + last_s_r / 3);
         i++;
-        last_s_l = leftintake_motor.velocity(rpm);
-        last_s_r = righttintake_motor.velocity(rpm);
+        last_s_l = left_fw_motor.velocity(rpm);
+        last_s_r = right_fw_motor.velocity(rpm);
       }
     } else {
-      last_s_l = 0;
-      last_s_r = 0;
+      last_s_l=0;
+      last_s_r=0;
     }
 
-    if (BtnU) {
-      Controller1.Screen.clearScreen();
-      Controller1.Screen.setCursor(1, 1);
-      Controller1.Screen.print(leftintake_motor.temperature());
-      Controller1.Screen.newLine();
-      Controller1.Screen.print(righttintake_motor.temperature());
-    }
-
-    wait(10, msec); // Sleep the task for a short amount of time to
-                    // prevent wasted resources.
-                    // Brain.Screen.newLine();
-                    // Brain.Screen.print(Brain.timer(msec) - Brain_time_111);
+    // Sleep the task for a short amount of time to prevetning wasting 
+    // too much resources.
+    wait(10, msec); 
   }
+}
+
+void SystemChecks() {
+  // System Checks Battery FieldControl etc ...
+  Brain.Screen.print(" ********** System Checks ********** ");
+  if(Competition.isEnabled() == true) { // Checks if competition mode is enabled
+        Brain.Screen.setFillColor(green);
+          Brain.Screen.print("Competition Mode is Enabled Do your best out there :)");
+  }
+
+  if(Competition.isCompetitionSwitch() == true) {
+    Brain.Screen.print("Connected to the Competition Switch ✅");  
+  }  else if(Competition.isCompetitionSwitch() == false) {
+     Brain.Screen.print("Not Connected to the Competition Switch ❌");
+  }
+  
+  // Checks if the field controller is connected to the controller.
+  if(Competition.isFieldControl() == true) {
+    Brain.Screen.setFillColor(green);
+    Brain.Screen.print("Connected to the Field Control System ✅");   
+  } else {
+    Brain.Screen.setFillColor(red);
+    Brain.Screen.print("Not Connected to the Field Control System ❌");  
+  }
+  
+
+  int Battery = Brain.Battery.capacity();
+  if (Battery >= 80) { 
+    // Checks if the battery capacity is equal to 80% or above 80%.
+    Brain.Screen.setFillColor(green);
+    Brain.Screen.setCursor(1,4);
+    Brain.Screen.print("Battery Percent Above 80% Shouldn't need charging. ✅"); 
+    
+  } else if (Battery <= 25){ // Checks if the battery capacity is equal to 25% or below 25%.
+    Brain.Screen.setFillColor(red);
+    Brain.Screen.setCursor(1,4);
+    Brain.Screen.print("Battery NEEDS charging RIGHT NOW. ❌");
+  }
+  Brain.Screen.print(" ********** System Checks DONE!!! ");
+  //... End of Checks Start Code...
 }
 
 //
 // Main will set up the competition functions and callbacks.
 //
 int main() {
+  // SystemChecks();
+  // pre_auton();
+
   // Set up callbacks for autonomous and driver control periods.
   Competition.autonomous(autonomous);
   Competition.drivercontrol(usercontrol);
@@ -372,7 +413,9 @@ int main() {
     wait(100, msec);
   }*/
   // Prevent main from exiting with an infinite loop.
+
   while (true) {
-    wait(100, msec);
+    wait(100, msec); 
   }
 }
+ 
