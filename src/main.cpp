@@ -12,18 +12,18 @@
 // Robot Configuration:
 // [Name]               [Type]        [Port(s)]
 // Controller1          controller                    
-// left_fw_motor        motor         5               
+// left_fw_motor        motor         8               
 // left_chassis1        motor         3               
 // right_chassis1       motor         2               
 // LimitSwitchA         limit         A               
 // lift_down            motor         9               
-// right_fw_motor       motor         8               
+// right_fw_motor       motor         5               
 // left_chassis2        motor         4               
 // right_chassis2       motor         1               
 // grab_motor           motor         6               
 // InertialA            inertial      10              
+// DigitalOutG          digital_out   G               
 // VisionA              vision        19              
-// Vision7              vision        7               
 // ---- END VEXCODE CONFIGURED DEVICES ----
 
 #include "vex.h"
@@ -82,54 +82,63 @@ void pre_auton(void) {
 /*---------------------------------------------------------------------------*/
 
 void autonomous(void) {
-  fw_rpm(74, 74);
-  DriveFor(25.5, 1750);
-  wait(100, msec);
-  TurnForAngle(90, 800);
-  ChassisControl(40, 40);
-  wait(500, msec);
-  ChassisControl(25, 25);
-  grab(-100);
-  wait(250, msec);
-  ChassisControl(0, 0);
-  grab(0);
-  wait(500, msec);
-  TurnForAngle(10, 500);
-  wait(100, msec);
+  // Roll the first roller.
+  double start_time = Brain.timer(msec);
+  fw_rpm(75, 78);
+  DriveFor(27, 2000);
+  TurnForAngle(88, 700);
+  wait(50, msec);
   for(int i = 0; i < 2; i++) {
     liftDown(100);
-    wait(100, msec);
+    wait(80, msec);
     liftDown(-50);
-    wait(100, msec);
+    wait(80, msec);
     liftDown(0);
     lift_down.resetRotation();
-    for(int i = 0; i < 10; i++) {
-      fw_pid_rpm_with_time_limit(75, 75, 200);
+    for (int j = 0; j < 3; j++) {
+      fw_pid_rpm_with_time_limit(458, 458, 220);
     }
-    wait(1000, msec);
+    if (i == 0) {
+      wait(400, msec);
+    }
   }
-  fw(0, 0);
-  TurnForAngle(136, 750);
+  fw_rpm(0, 0);
+
+  grab(100);
+  DriveFor(5, 500);
+  ChassisControl(55,  55);
+  wait(300, msec);
+  grab(0);
+  DriveFor(-6, 1000);
+  TurnForAngle(130, 1000);
+
   grab(-100);
-  DriveFor(45, 2000);
-  DriveFor(28, 1100);
-  ChassisControl(0, 0);
-  TurnForAngle(-94, 800);
-  fw_pid_rpm_with_time_limit(55, 55, 1000);
-  fw_rpm(53, 53);
-  wait(500, msec);
-  for(int i = 0; i < 4; i++) {
+  DriveFor(33, 2100);
+  wait(200, msec);
+  DriveFor(34, 2300);
+  fw_rpm(68, 68);
+  wait(200, msec);
+  TurnForAngle(-97, 800);
+  DriveFor(-7, 800);
+  double target_rpm = 400;
+  for(int i = 0; i < 3; i++) {
     liftDown(100);
-    wait(100, msec);
+    wait(80, msec);
     liftDown(-50);
-    wait(100, msec);
+    wait(80, msec);
     liftDown(0);
     lift_down.resetRotation();
-    for(int i = 0; i < 5; i++) {
-      fw_pid_rpm_with_time_limit(71, 71, 200);
+    for (int j = 0; j < 3; j++) {
+      fw_pid_rpm_with_time_limit(target_rpm, target_rpm + 10, 220);
     }
-    wait(1000, msec);
+    if (i < 2) {
+      wait(350, msec);
+    }
+    grab(0);
   }
+  fw_rpm(0, 0);
+
+  Brain.Screen.printAt(100, 100, "Finihsed %f",  (Brain.timer(msec) - start_time) / 1000);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -162,6 +171,11 @@ int long_fly_flag = 0,long_fly_flag1 = 0;
 int i=471;
 int last_s_l=0, last_s_r = 0;
 
+bool cylinder_on = true;
+int first_shoot = 0;
+int second_shoot = 0;
+int xxxx = 1, yyyy = 1;
+
 void usercontrol(void) {   
   // User control code here, inside the loop
   // Brain.Screen.clearScreen(black);
@@ -191,8 +205,8 @@ void usercontrol(void) {
     R1 = Controller1.ButtonR1.pressing();
     R2 = Controller1.ButtonR2.pressing();
     
-    BtnB = Controller1.ButtonA.pressing();
-    BtnA = Controller1.ButtonB.pressing();
+    BtnA = Controller1.ButtonA.pressing();
+    BtnB = Controller1.ButtonB.pressing();
     BtnX = Controller1.ButtonX.pressing();
     BtnY = Controller1.ButtonY.pressing();
     BtnU = Controller1.ButtonUp.pressing();
@@ -210,7 +224,8 @@ void usercontrol(void) {
       // Turn if the Ch4 signal is over the threshold.
       if (fw_flag == 1 || BtnB || BtnA) {
         // Slow the turn since we are about to shoot.
-        ChassisControl((Ch3 - Ch4) * 0.5, (Ch3 + Ch4) * 0.35);
+        // ChassisControl((Ch3 - Ch4) * 0.5, (Ch3 + Ch4) * 0.35);
+        ChassisControl((Ch3 - Ch4) * 0.3, (Ch3 + Ch4) * 0.20);
       } else {
         // Turn normally.
         ChassisControl((Ch3 - Ch4) * 0.65, (Ch3 + Ch4) * 0.65 );
@@ -230,7 +245,15 @@ void usercontrol(void) {
       fly_flag1 = 0;
     }
 
-    /*if(BtnY && long_fly_flag1 == 0 && long_fly_flag == 0) {
+    if (BtnY) {
+      Brain.Screen.clearScreen(black);
+      xxxx = 1;
+      yyyy = 1;
+      //AimingGoal();
+    }
+
+    /*
+    if(BtnY && long_fly_flag1 == 0 && long_fly_flag == 0) {
       long_fly_flag = 1;
       long_fly_flag1 = 1;
     } else if(BtnY && long_fly_flag1 == 0 && long_fly_flag == 1) {
@@ -239,16 +262,30 @@ void usercontrol(void) {
     } else if(!BtnY) {
       long_fly_flag1 = 0;
     }*/
-
-    if(BtnY) {
-      AimingGoal();
-    }
     
+    if (L1) {
+      if (L2) {
+         DigitalOutG.set(true);
+      }
+    } else if (L2) {
+      DigitalOutG.set(false);
+    }
+ 
     // BtnB will shot continueously
     if(BtnB) {
+      double l_rpm = left_fw_motor.velocity(rpm);
+      double r_rpm = right_fw_motor.velocity(rpm);
       fly_flag = 0;
-      fw_pid_rpm_with_time_limit(54.2, 45, 1);
-
+      double target_rpm = 405;
+      if (first_shoot) {
+        first_shoot--;
+      } else {
+        target_rpm = 385;
+      }
+      for (int i = 1; i < 3; i++) {
+        fw_pid_rpm(target_rpm, target_rpm);
+      }
+      wait(100, msec);       
       if(fw_flag1 == 0) {
         fw_flag = 1;
         fw_flag1 = 1;
@@ -258,13 +295,16 @@ void usercontrol(void) {
         fw_time = Brain.timer(msec);
         lift_flag1 = 1;
       }
+      
+      double c_l_rpm = left_fw_motor.velocity(rpm);
+      double c_r_rpm = right_fw_motor.velocity(rpm);
 
-      if(fw_flag == 1 && Brain.timer(msec) - fw_time < 1) {
-        liftDown(100);
-        fw_pid_rpm_with_time_limit(50, 50, 200);
+      if(fw_flag == 1 && Brain.timer(msec) - fw_time < 1) {  
+        liftDown(100);  
+        wait(30, msec); 
       } else if(LimitSwitchA.pressing() == 0) {
-        liftDown(-50);
-        lift_flag = 1;
+        liftDown(-35);
+        lift_flag = 1;   
       }
 
       if(LimitSwitchA.pressing() == 1 && lift_flag == 1) {
@@ -274,16 +314,26 @@ void usercontrol(void) {
         lift_flag1 = 0;
         fw_time = 0;
         lift_down.resetRotation();
-        liftDown(0);
+        liftDown(0); 
       }
+      
+      double f_l_rpm = left_fw_motor.velocity(rpm);
+      double f_r_rpm = right_fw_motor.velocity(rpm);
+
+
+      Brain.Screen.printAt(15, 15 * (yyyy++), "%d L:%.2f %.2f %.2f| R:%.2f %.2f %.2f", 
+                           xxxx, l_rpm, c_l_rpm, f_l_rpm, r_rpm, c_r_rpm, f_r_rpm);     
+      xxxx++;
     }
         
     //========================================================
     if(fly_flag == 1 && !BtnB) {
-      fw_pid_rpm_with_time_limit(61.2, 50, 1);
+      fw_rpm(57, 57);
+      first_shoot = 4;
+      second_shoot = 2;
       long_fly_flag = 0;
     } else if(long_fly_flag == 1) {
-      fw_rpm(70, 70);
+      fw_rpm(100, 100);
       fly_flag = 0;
     } else if(BtnD) {
       fw(-50, -50);
@@ -294,12 +344,12 @@ void usercontrol(void) {
     // Single shot
     if(BtnA && !BtnB) { 
       // Stablize the motor speed first for single shot.
-      fw_rpm(70, 70);
+      fw_rpm(67, 67);
       liftDown(100);
     }
 
     if(!BtnA && LimitSwitchA.pressing() == 0 && !BtnB) {
-      liftDown(-25);
+      liftDown(-20);
     } else if(!BtnA && !BtnB) {
       fw_flag = 0;
       fw_flag1 = 0;
@@ -319,8 +369,10 @@ void usercontrol(void) {
       grab(0);
     }
     
+    /*
     if(fly_flag == 1 || BtnB || long_fly_flag == 1 ) {
       if(i >= 470) {
+
         Brain.Screen.clearScreen(black);
         Brain.Screen.setPenColor(white);
         Brain.Screen.drawLine(20,1,20,230);
@@ -331,13 +383,16 @@ void usercontrol(void) {
         Brain.Screen.setPenColor(green);
         Brain.Screen.drawLine(231,20,240,20);
         Brain.Screen.printAt(241, 20, ":RIGHT");
+        
         i=0;
       } else {
+
         Brain.Screen.setPenColor(red);
         Brain.Screen.drawLine(i + 20, 220-left_fw_motor.velocity(rpm) / 3,i + 20, 220- last_s_l / 3);
 
         Brain.Screen.setPenColor(green);
         Brain.Screen.drawLine(i + 20, 30 + right_fw_motor.velocity(rpm) / 3, i + 20, 30 + last_s_r / 3);
+
         i++;
         last_s_l = left_fw_motor.velocity(rpm);
         last_s_r = right_fw_motor.velocity(rpm);
@@ -345,7 +400,7 @@ void usercontrol(void) {
     } else {
       last_s_l=0;
       last_s_r=0;
-    }
+    }*/
 
     // Sleep the task for a short amount of time to prevetning wasting 
     // too much resources.

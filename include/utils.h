@@ -26,11 +26,11 @@ extern enum autonPath {
 };
 
 template <typename T>
-extern T angleWrap(T);
+T angleWrap(T);
 
-extern float clip(float, float, float);
+float clip(float, float, float);
 
-extern class Graph {
+class Graph {
   public:
     float* dataVar;
     int least;
@@ -46,11 +46,11 @@ extern class Graph {
     float graphRightBorder = 475.0;
     int maxSize;
 
-    std::vector<float> graphData;
+    std::vector<std::vector<float>> graphData {{},{}};
 
     Graph(float, int, float);
 
-    void updateData(float);
+    void updateData(float dataPoint, int index);
 
     void drawGraph();
 };

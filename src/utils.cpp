@@ -25,15 +25,17 @@ Graph::Graph(float var, int ms, float g) {
   goal = g;
 }
 
-void Graph::updateData(float dataPoint) {
-  graphData.push_back(dataPoint);
+void Graph::updateData(float dataPoint, int index) {
+  graphData[index].push_back(dataPoint);
 
-  if (graphData.size() > maxSize) {
-    graphData.erase(graphData.begin());
+  if (graphData[index].size() > maxSize) {
+    graphData[index].erase(graphData[index].begin());
   }
   
-  least = *min_element(graphData.begin(), graphData.end());
-  greatest = *max_element(graphData.begin(), graphData.end());
+  double t_least = *min_element(graphData[index].begin(), graphData[index].end());
+  double t_greatest = *max_element(graphData[index].begin(), graphData[index].end());
+  least = least < t_least ? least : t_least;
+  greatest = greatest > t_greatest ? greatest : t_greatest;
   
   if (greatest == least) {
     greatest += 0.1;
@@ -48,19 +50,21 @@ void Graph::drawGraph() {
   Brain.Screen.setPenColor(color::green);
 
   prevX = graphLeftBorder;
-  prevY = graphTopBorder + ((graphData[0] - this->least) * ((graphBottomBorder-graphTopBorder)/(this->greatest-this->least)));
-
-  for (int i = 0; i < graphData.size(); i++) {
-    px = i * ((graphRightBorder - graphLeftBorder) / graphData.size()) + graphLeftBorder;
-    py = 272 - (graphTopBorder*2 + ((graphData[i] - this->least) * ((graphBottomBorder - graphTopBorder)/(this->greatest - this->least))));
-    Brain.Screen.drawLine(prevX, prevY, px, py);    
-    prevX = px;
-    prevY = py; 
+  prevY = graphTopBorder + ((graphData[0][0] - this->least) * ((graphBottomBorder-graphTopBorder)/(this->greatest-this->least)));
+  color color_array[2] = {color::green, color::orange};
+  for (int index = 0; index < graphData.size(); index++) {
+    Brain.Screen.setPenColor(color_array[index]);
+    for (int i = 0; i < graphData[index].size(); i++) {
+      px = i * ((graphRightBorder - graphLeftBorder) / graphData[index].size()) + graphLeftBorder;
+      py = 272 - (graphTopBorder*2 + ((graphData[index][i] - this->least) * ((graphBottomBorder - graphTopBorder)/(this->greatest - this->least))));
+      Brain.Screen.drawLine(prevX, prevY, px, py);    
+      prevX = px;
+      prevY = py; 
+    }
+    Brain.Screen.printAt(graphLeftBorder - 75 * (index + 1), py, "%.2f", graphData[index][graphData.size()-1]);
   }
-  
-  Brain.Screen.printAt(graphLeftBorder-75, py, "%.2f", graphData[graphData.size()-1]);
   Brain.Screen.setPenColor(color::red);
-  py = 272 - (graphTopBorder*2 + ((this->goal - this->least) * ((graphBottomBorder - graphTopBorder)/(this->greatest - this->least))));
+  py = 272 - (graphTopBorder*2 + ((this->goal - this->least) * ((graphBottomBorder - graphTopBorder) / (this->greatest - this->least))));
   Brain.Screen.drawLine(graphLeftBorder, py, graphRightBorder, py);
   Brain.Screen.render();
 }

@@ -9,28 +9,21 @@ brain  Brain;
 
 // VEXcode device constructors
 controller Controller1 = controller(primary);
-motor left_fw_motor = motor(PORT5, ratio6_1, false);
+motor left_fw_motor = motor(PORT8, ratio6_1, true);
 motor left_chassis1 = motor(PORT3, ratio18_1, false);
 motor right_chassis1 = motor(PORT2, ratio18_1, true);
-limit LimitSwitchA = limit(Brain.ThreeWirePort.A);
+limit LimitSwitchA = limit(Brain.ThreeWirePort.H);
 motor lift_down = motor(PORT9, ratio18_1, true);
-motor right_fw_motor = motor(PORT8, ratio6_1, true);
+motor right_fw_motor = motor(PORT5, ratio6_1, false);
 motor left_chassis2 = motor(PORT4, ratio18_1, false);
 motor right_chassis2 = motor(PORT1, ratio18_1, true);
 motor grab_motor = motor(PORT6, ratio18_1, false);
 inertial InertialA = inertial(PORT10);
+digital_out DigitalOutG = digital_out(Brain.ThreeWirePort.G);
 /*vex-vision-config:begin*/
-signature VisionA__HIGH_GOAL_RED = signature (1, 771, 9973, 5372, -1813, 253, -780, 0.9, 0);
-signature VisionA__HIGH_GOAL_BLUE = signature (2, -2445, -637, -1541, 1549, 6885, 4217, 1.4, 0);
-signature VisionA__HIGH_GOAL_RED_GRANT = signature (3, 0, 0, 0, 0, 0, 0, 0, 0);
-signature VisionA__SIG_4 = signature (4, 0, 0, 0, 0, 0, 0, 3, 0);
-signature VisionA__SIG_5 = signature (5, 0, 0, 0, 0, 0, 0, 3, 0);
-signature VisionA__SIG_6 = signature (6, 0, 0, 0, 0, 0, 0, 3, 0);
-signature VisionA__SIG_7 = signature (7, 0, 0, 0, 0, 0, 0, 3, 0);
-vision VisionA = vision (PORT19, 37, VisionA__HIGH_GOAL_RED, VisionA__HIGH_GOAL_BLUE, VisionA__HIGH_GOAL_RED_GRANT, VisionA__SIG_4, VisionA__SIG_5, VisionA__SIG_6, VisionA__SIG_7);
-/*vex-vision-config:end*/
-/*vex-vision-config:begin*/
-vision Vision7 = vision (PORT7, 50);
+signature VisionA__HIGH_GOAL_RED = signature (1, 4441, 7203, 5822, -1921, -409, -1165, 1.4, 0);
+signature VisionA__HIGH_GOAL_BLUE = signature (2, -2771, 219, -1276, 1959, 6677, 4318, 1.1, 0);
+vision VisionA = vision (PORT19, 50, VisionA__HIGH_GOAL_RED, VisionA__HIGH_GOAL_BLUE);
 /*vex-vision-config:end*/
 
 // VEXcode generated functions
