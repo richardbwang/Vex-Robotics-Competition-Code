@@ -2,7 +2,7 @@
 /*                                                                            */
 /*    Module:       vex.h                                                     */
 /*    Author:       Vex Robotics                                              */
-/*    Created:      August 2, 2022                                               */
+/*    Created:      1 Feb 2019                                                */
 /*    Description:  Default header for V5 projects                            */
 /*                                                                            */
 /*----------------------------------------------------------------------------*/

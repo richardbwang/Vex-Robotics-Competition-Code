@@ -1,25 +1,19 @@
 #include <string>
 
-void ChassisControl(float lPower, float rPower);
-void ChassisControlPercent(float lPower, float rPower);
-void ResetChassis();
-double GetLeftRotationDegree();
-double GetRightRotationDegree();
+void ChassisControl(float left_power, float right_power);
+void ChassisControlPercent(float left_velocity, float right_velocity);
 
-double TurnForAngle(float turnAngle, float timeLimit_msec);
+double GetInertialHeading();
+double NormalizeAngle(double angle);
+double TurnForAngle(float turn_angle, float time_limit_msec);
+
+// New turning function using PID class.
+double TurnToAngle(float turn_angle, float time_limit_msec);
+
 void DriveFor(float distance_in, float time_limit_msec);
+void DriveFor(float distance_in, float time_limit_msec, bool catapult);
+void Grab(float power);
 
 void Stop(vex::brakeType type = vex::brake);
-
-void liftDown(float power);
-
-
-
-void fw(float lPower, float rPower);
-void fw_rpm(double lRpm, double rRpm);
-void fw_pid_rpm(double lRpm, double rRpm);
-void FwSpinFor(double l_rpm, double r_rpm, int time_limt_msec);
-void fw_pid_rpm_with_time_limit(double lRpm, double rRpm, int time_limt_msec);
-
-// Grab the disk and also spin the roller.
-void grab(float power);
+void chassis_reset();
+void run(float lPower, float rPower);
