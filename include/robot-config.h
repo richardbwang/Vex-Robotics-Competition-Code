@@ -15,6 +15,7 @@ extern motor left_chassis3;
 extern motor right_chassis3;
 extern inertial InertialA;
 extern digital_out DigitalOutC;
+extern distance DistanceA;
 extern digital_out DigitalOutD;
 extern digital_out DigitalOutE;
 

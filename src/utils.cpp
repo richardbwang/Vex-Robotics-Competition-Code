@@ -14,18 +14,18 @@ T angleWrap(T _theta) {
   return fmod(_theta, 360);
 }
 
-float clip(float n, float lower, float upper) {
+double clip(double n, double lower, double upper) {
   return std::max(lower, std::min(n, upper));
 }
 
-Graph::Graph(float var, int ms, float g) {
+Graph::Graph(double var, int ms, double g) {
   least = var;
   greatest = var;
   maxSize = ms;
   goal = g;
 }
 
-void Graph::updateData(float dataPoint, int index) {
+void Graph::updateData(double dataPoint, int index) {
   graphData[index].push_back(dataPoint);
 
   if (graphData[index].size() > maxSize) {

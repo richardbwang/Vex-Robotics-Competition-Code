@@ -12,7 +12,7 @@
 template <typename T>
 extern int sign(T);
 
-extern float logDrive(float);
+extern double logDrive(double);
 
 extern enum autonPath {
   Right40 = 0,
@@ -28,29 +28,29 @@ extern enum autonPath {
 template <typename T>
 T angleWrap(T);
 
-float clip(float, float, float);
+double clip(double, double, double);
 
 class Graph {
   public:
-    float* dataVar;
+    double* dataVar;
     int least;
     int greatest;
-    float goal;
-    float prevX = 0;
-    float prevY = 0;
-    float px = 0;
-    float py = 0;
-    float graphBottomBorder =  225.0;
-    float graphTopBorder = 25.0;
-    float graphLeftBorder = 75.0;
-    float graphRightBorder = 475.0;
+    double goal;
+    double prevX = 0;
+    double prevY = 0;
+    double px = 0;
+    double py = 0;
+    double graphBottomBorder =  225.0;
+    double graphTopBorder = 25.0;
+    double graphLeftBorder = 75.0;
+    double graphRightBorder = 475.0;
     int maxSize;
 
-    std::vector<std::vector<float>> graphData {{},{}};
+    std::vector<std::vector<double>> graphData {{},{}};
 
-    Graph(float, int, float);
+    Graph(double, int, double);
 
-    void updateData(float dataPoint, int index);
+    void updateData(double dataPoint, int index);
 
     void drawGraph();
 };

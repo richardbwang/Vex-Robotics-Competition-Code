@@ -5,10 +5,23 @@
 #include <cmath>
 
 #include "motor-control.h"
+#include "autonomous.h"
 
 bool isturning = false;
+bool usevelocity = false;
+double correct_angle = 0;
 
-void ChassisControl(float left_power, float right_power) {
+void ChassisControl(double left_power, double right_power) {
+  left_chassis1.spin(fwd, 0.128 * right_power, voltageUnits::volt);
+  left_chassis2.spin(fwd, 0.128 * right_power, voltageUnits::volt);
+  left_chassis3.spin(fwd, 0.128 * right_power, voltageUnits::volt);
+  
+  right_chassis1.spin(fwd, 0.128 * left_power, voltageUnits::volt);
+  right_chassis2.spin(fwd, 0.128 * left_power, voltageUnits::volt);
+  right_chassis3.spin(fwd, 0.128 * left_power, voltageUnits::volt);
+}
+
+void ChassisControlReverse(double left_power, double right_power) {
   left_chassis1.spin(fwd, 0.128 * left_power, voltageUnits::volt);
   left_chassis2.spin(fwd, 0.128 * left_power, voltageUnits::volt);
   left_chassis3.spin(fwd, 0.128 * left_power, voltageUnits::volt);
@@ -18,24 +31,18 @@ void ChassisControl(float left_power, float right_power) {
   right_chassis3.spin(fwd, 0.128 * right_power, voltageUnits::volt);
 }
 
-void ChassisControl1(float left_power, float right_power) {
-  left_chassis1.spin(fwd, left_power, voltageUnits::volt);
-  left_chassis2.spin(fwd, left_power, voltageUnits::volt);
-  left_chassis3.spin(fwd, left_power, voltageUnits::volt);
+void ChassisControl1(double left_power, double right_power, double left_only, double right_only) {
+  if (right_only == true || left_only == false) {
+    left_chassis1.spin(fwd, right_power, voltageUnits::volt);
+    left_chassis2.spin(fwd, right_power, voltageUnits::volt);
+    left_chassis3.spin(fwd, right_power, voltageUnits::volt);
+  }
   
-  right_chassis1.spin(fwd, right_power, voltageUnits::volt);
-  right_chassis2.spin(fwd, right_power, voltageUnits::volt);
-  right_chassis3.spin(fwd, right_power, voltageUnits::volt);
-}
-
-void ChassisControlPercent(float left_velocity, float right_velocity) {
-  left_chassis1.spin(forward, left_velocity, percent);
-  left_chassis2.spin(forward, left_velocity, percent);
-  left_chassis3.spin(forward, left_velocity, percent);
-
-  right_chassis1.spin(forward, right_velocity, percent);
-  right_chassis2.spin(forward, right_velocity, percent);
-  right_chassis3.spin(forward, right_velocity, percent);
+  if (left_only == true || right_only == false) {
+  right_chassis1.spin(fwd, left_power, voltageUnits::volt);
+  right_chassis2.spin(fwd, left_power, voltageUnits::volt);
+  right_chassis3.spin(fwd, left_power, voltageUnits::volt);
+  }
 }
 
 void ResetChassis() {
@@ -48,14 +55,13 @@ void ResetChassis() {
   right_chassis3.setPosition(0, degrees);
 }
 
-double GetLeftRotationDegree() {
+double GetRightRotationDegree() {
   return (left_chassis1.position(degrees) + left_chassis2.position(degrees) + left_chassis3.position(degrees)) / 3;
 }
 
-double GetRightRotationDegree() {
+double GetLeftRotationDegree() {
   return (right_chassis1.position(degrees) + right_chassis2.position(degrees) + right_chassis3.position(degrees)) / 3;
 }
-
 
 //================================Chassis Movement=========================================//
 double NormalizeAngle(double angle) {
@@ -68,84 +74,33 @@ double NormalizeAngle(double angle) {
   return angle;
 }
 
-double GetInertialHeading() {
+double GetInertialHeading(bool normalize) {
   double result = InertialA.rotation(degrees);
-  return NormalizeAngle(result);
-}
-
-double TurnSmallNoBool(float turn_angle, float time_limit_msec) {
-  double threshold = 0.5;
-  const float kp = 0.4;
-  const float ki = 0;
-  const float kd = 0;
-  PID pid = PID(kp, ki, kd);
-  
-  pid.SetTarget(turn_angle);
-  //pid.SetIntegralMax(300);  
-  //pid.SetProportionalRange(fabs(turn_angle) / 2);
-  
-  pid.SetErrorTolerance(threshold);
-  pid.SetDerivativeTolerance(threshold * 4.5);
-  // 5 Iterations
-  pid.SetStableTimeDuration(250);
-  
-  // Draw the baseline.
-  double draw_amplifier = 230 / fabs(turn_angle);
-  Brain.Screen.clearScreen(black);
-  Brain.Screen.setPenColor(green);
-  Brain.Screen.drawLine(0, fabs(turn_angle) * draw_amplifier, 
-                        600, fabs(turn_angle) * draw_amplifier);
-  Brain.Screen.setPenColor(red);
-  
-  // Start the PID loop.
-  InertialA.setHeading(0, degrees);
-  InertialA.setRotation(0, degrees);
-  float start_time = Brain.timer(msec);
-  float output;
-  float current_heading;
-  float previous_heading = 0;
-  int index = 1;
-  while (!pid.TargetArrived() &&
-         Brain.timer(msec) - start_time <= time_limit_msec) {
-    current_heading = GetInertialHeading();
-    output = pid.Update(GetInertialHeading());
-    
-    // Draw line
-    Brain.Screen.drawLine(
-        index * 3, fabs(previous_heading) * draw_amplifier, 
-        (index + 1) * 3, fabs(current_heading * draw_amplifier));
-    index++;
-    previous_heading = current_heading;
-    // End
-    ChassisControl1(-output, output);
-    wait(10, msec);
-  }  
-  if(isturning == false && pid.TargetArrived()) {
-    Stop(vex::hold);
-    InertialA.setHeading(0, degrees);
-    InertialA.setRotation(0, degrees);
+  if(normalize == false) {
+    return(result);
+  } else {
+    return NormalizeAngle(result);
   }
-  return GetInertialHeading();
 }
 
 //1-60 degrees
-double TurnSmall(float turn_angle, float time_limit_msec) {
+double TurnSmall(double turn_angle, double time_limit_msec) {
   Stop(vex::brakeType::coast);
   isturning = true;
   double threshold = 0.8;
-  const float kp = 0.72;
-  const float ki = 0.00015;
-  const float kd = 4.15;
+  const double kp = 0.72;
+  const double ki = 0.00015;
+  const double kd = 4.15;
   PID pid = PID(kp, ki, kd);
   
   pid.SetTarget(turn_angle);
   //pid.SetIntegralMax(300);  
-  pid.SetProportionalRange(fabs(turn_angle) / 2.5);
+  pid.SetProportionalRange(5);
   
-  pid.SetErrorTolerance(threshold);
+  pid.SetSmallBigErrorTolerance(threshold, 0);
+  pid.SetSmallBigErrorDuration(250, 0);
   pid.SetDerivativeTolerance(threshold * 4.5);
   // 5 Iterations
-  pid.SetStableTimeDuration(200);
   
   // Draw the baseline.
   double draw_amplifier = 230 / fabs(turn_angle);
@@ -156,12 +111,10 @@ double TurnSmall(float turn_angle, float time_limit_msec) {
   Brain.Screen.setPenColor(red);
   
   // Start the PID loop.
-  InertialA.setHeading(0, degrees);
-  InertialA.setRotation(0, degrees);
-  float start_time = Brain.timer(msec);
-  float output;
-  float current_heading;
-  float previous_heading = 0;
+  double start_time = Brain.timer(msec);
+  double output;
+  double current_heading;
+  double previous_heading = 0;
   int index = 1;
   while (!pid.TargetArrived() &&
          Brain.timer(msec) - start_time <= time_limit_msec) {
@@ -175,35 +128,34 @@ double TurnSmall(float turn_angle, float time_limit_msec) {
     index++;
     previous_heading = current_heading;
     // End
-    ChassisControl1(-output, output);
+    ChassisControl1(output, -output);
     wait(10, msec);
   }  
   Stop(vex::hold);
+  correct_angle = turn_angle;
   Controller1.Screen.print(GetInertialHeading());
   return GetInertialHeading();
-  InertialA.setHeading(0, degrees);
-  InertialA.setRotation(0, degrees);
   isturning = false;
 }
 
 //61-120 degrees
-double TurnMedium(float turn_angle, float time_limit_msec) {
+double TurnMedium(double turn_angle, double time_limit_msec) {
   Stop(vex::brakeType::coast);
   isturning = true;
-  double threshold = 1;
-  const float kp = 0.71;
-  const float ki = 0.00016;
-  const float kd = 4.12;
+  double threshold = 0.8;
+  const double kp = 0.71;
+  const double ki = 0.00016;
+  const double kd = 4.12;
   PID pid = PID(kp, ki, kd);
   
   pid.SetTarget(turn_angle);
   //pid.SetIntegralMax(300);  
-  pid.SetProportionalRange(fabs(turn_angle) / 6);
+  pid.SetProportionalRange(5);
   
-  pid.SetErrorTolerance(threshold);
+  pid.SetSmallBigErrorTolerance(threshold, 0);
+  pid.SetSmallBigErrorDuration(250, 0);
   pid.SetDerivativeTolerance(threshold * 4.5);
   // 5 Iterations
-  pid.SetStableTimeDuration(250);
   
   // Draw the baseline.
   double draw_amplifier = 230 / fabs(turn_angle);
@@ -214,12 +166,10 @@ double TurnMedium(float turn_angle, float time_limit_msec) {
   Brain.Screen.setPenColor(red);
   
   // Start the PID loop.
-  InertialA.setHeading(0, degrees);
-  InertialA.setRotation(0, degrees);
-  float start_time = Brain.timer(msec);
-  float output;
-  float current_heading;
-  float previous_heading = 0;
+  double start_time = Brain.timer(msec);
+  double output;
+  double current_heading;
+  double previous_heading = 0;
   int index = 1;
   while (!pid.TargetArrived() &&
          Brain.timer(msec) - start_time <= time_limit_msec) {
@@ -233,35 +183,34 @@ double TurnMedium(float turn_angle, float time_limit_msec) {
     index++;
     previous_heading = current_heading;
     // End
-    ChassisControl1(-output, output);
+    ChassisControl1(output, -output);
     wait(10, msec);
   }  
   Stop(vex::hold);
+  correct_angle = turn_angle;
   Controller1.Screen.print(GetInertialHeading());
   return GetInertialHeading();
-  InertialA.setHeading(0, degrees);
-  InertialA.setRotation(0, degrees);
   isturning = false;
 }
 
 //121-180 degrees
-double TurnBig(float turn_angle, float time_limit_msec) {
+double TurnBig(double turn_angle, double time_limit_msec) {
   Stop(vex::brakeType::coast);
   isturning = true;
-  double threshold = 1;
-  const float kp = 0.6;
-  const float ki = 0.00014;
-  const float kd = 4.16;
+  double threshold = 0.8;
+  const double kp = 0.6;
+  const double ki = 0.00014;
+  const double kd = 4.16;
   PID pid = PID(kp, ki, kd);
   
   pid.SetTarget(turn_angle);
   //pid.SetIntegralMax(300);  
-  pid.SetProportionalRange(fabs(turn_angle) / 9);
+  pid.SetProportionalRange(5);
   
-  pid.SetErrorTolerance(threshold);
+  pid.SetSmallBigErrorTolerance(threshold, 0);
+  pid.SetSmallBigErrorDuration(250, 0);
   pid.SetDerivativeTolerance(threshold * 4.5);
   // 5 Iterations
-  pid.SetStableTimeDuration(250);
   
   // Draw the baseline.
   double draw_amplifier = 230 / fabs(turn_angle);
@@ -272,12 +221,10 @@ double TurnBig(float turn_angle, float time_limit_msec) {
   Brain.Screen.setPenColor(red);
   
   // Start the PID loop.
-  InertialA.setHeading(0, degrees);
-  InertialA.setRotation(0, degrees);
-  float start_time = Brain.timer(msec);
-  float output;
-  float current_heading;
-  float previous_heading = 0;
+  double start_time = Brain.timer(msec);
+  double output;
+  double current_heading;
+  double previous_heading = 0;
   int index = 1;
   while (!pid.TargetArrived() &&
          Brain.timer(msec) - start_time <= time_limit_msec) {
@@ -291,312 +238,236 @@ double TurnBig(float turn_angle, float time_limit_msec) {
     index++;
     previous_heading = current_heading;
     // End
-    ChassisControl1(-output, output);
+    ChassisControl1(output, -output);
     wait(10, msec);
   }  
   Stop(vex::hold);
+  correct_angle = turn_angle;
   Controller1.Screen.print(GetInertialHeading());
   return GetInertialHeading();
-  InertialA.setHeading(0, degrees);
-  InertialA.setRotation(0, degrees);
   isturning = false;
 }
 
-double TurnForAngle(float turn_angle, float time_limit_msec) {
-  /*
+void TurnToAngle(double turn_angle, double time_limit_msec) {
+  Stop(vex::brakeType::coast);
+  isturning = true;
+  //REMINDER: EXIT CONDITION REMOVED FOR TUNING
+  double threshold = 1;
+  const double kp = 0.9;
+  const double ki = 0.0433-(((fabs(turn_angle - GetInertialHeading()) - 90)/30))*0.005;
+  const double kd = 6;
+  PID pid = PID(kp, ki, kd);
+  
+  pid.SetTarget(turn_angle);
+  //pid.SetIntegralMax(300);  
+  pid.SetProportionalRange(5);
+  
+  pid.SetSmallBigErrorTolerance(threshold, threshold * 3);
+  pid.SetSmallBigErrorDuration(100, 500);
+  pid.SetDerivativeTolerance(threshold * 4.5);
+  // 5 Iterations
+  
+  // Draw the baseline.
+  double draw_amplifier = 230 / fabs(turn_angle);
   Brain.Screen.clearScreen(black);
   Brain.Screen.setPenColor(green);
-  double draw_amplifier = 3;
   Brain.Screen.drawLine(0, fabs(turn_angle) * draw_amplifier, 
                         600, fabs(turn_angle) * draw_amplifier);
   Brain.Screen.setPenColor(red);
-  */
-  // Decide the error threshhold.
-  double threshold = fabs(turn_angle) * 0.003 > 0.35 ? fabs(turn_angle) * 0.003 : 0.35;
-
   
-  // Predefined paramaters, DO NOT CHANGE!!!
-  std::string result;
-  //const float kp = 0.65, ki = 0.0004, kd = 45;
-  //const float kp = 0.66, ki = 0.0003, kd = 53;
-  //const float kp = 0.65, ki = 0.00015,  kd = 75;
-  float kp = 0.59, ki = 0 * 0.66, kd = 13.5;
-
-  float prev_time = 0, delta_time = 0, current_time = 0;
-  float integral = 0, error = 0, derivative = 0, prev_error = 0;
-  // float prev_angle = 0; 
-  float current_angle = 0;
-
-  // Condition variable to control the loop.
-  bool not_done = true;
-
-  // Reset heading and timer.
-  InertialA.setHeading(0, degrees);
-  float start_time = Brain.timer(msec);
-  
-  // Start to turn.
-  // int index = 0, xx = 0;
-  do {
-    current_time = Brain.timer(msec);
-    delta_time = prev_time == 0 ? 0 : current_time - prev_time;
-    prev_time = current_time;
-    current_angle = GetInertialHeading();
-    /*
+  // Start the PID loop.
+  double start_time = Brain.timer(msec);
+  double output;
+  double current_heading;
+  double previous_heading = 0;
+  int index = 1;
+  //REMINDER: EXIT CONDITION IS REMOVED FOR TUNING
+  while (!pid.TargetArrived() && Brain.timer(msec) - start_time <= time_limit_msec) {
+    current_heading = GetInertialHeading();
+    output = pid.Update(current_heading);
+    
+    // Draw line
     Brain.Screen.drawLine(
-      index * 3, fabs(prev_angle) * draw_amplifier, 
-      (index + 1) * 3, fabs(current_angle * draw_amplifier));
+        index * 3, fabs(previous_heading) * draw_amplifier, 
+        (index + 1) * 3, fabs(current_heading * draw_amplifier));
     index++;
-    prev_angle = current_angle;
-    */
-
-    // Compute KP, KI, KD.
-    error = turn_angle - current_angle;
-    if ((fabs(error) <= threshold) || (Brain.timer(msec) - start_time >= time_limit_msec)) {
-      not_done = false;
-      Stop(vex::brake);
-     } else {
-      integral += error * delta_time;      
-      if (error * integral < 0) {
-        integral /= 2;
-      } 
-      integral += error * delta_time;
-      derivative = delta_time == 0 ? 0 : (error - prev_error) / delta_time;      
-      prev_error = error;
-
-      float drive_speed = kp * error + ki * integral + kd * derivative;
-      ChassisControlPercent(-drive_speed, drive_speed);
-      /*
-      if (fabs(error) < 2) {
-        ///Brain.Screen.printAt(15, xx * 20, "Mid result: %.2f %.2f %.2f %.2f %.2f", current_angle, kp * error, ki * integral, kd * derivative, drive_speed); 
-        xx++;
-      }*/
-    }
-
+    previous_heading = current_heading;
+    // End
+    ChassisControl1(output, -output);
     wait(10, msec);
-  } while (not_done);
-
-  return InertialA.heading(degrees);
+  }  
+  Stop(vex::hold);
+  correct_angle = turn_angle;
+  Controller1.Screen.print(GetInertialHeading());
+  isturning = false;
 }
 
-void DriveTo(float distance_in, float max_output, float time_limit_msec) {
+void DriveTo(double distance_in, double time_limit_msec, double max_output) {
+  ResetChassis();
   Stop(vex::brakeType::coast);
   isturning = true;
   // Current robot setup, 3.25 inch wheel, 60/36 gear ratio.
-  const float wheel_distance_in = (36.0 / 60.0) * 3.25 * 3.14159;
   // Tuned parameters, DO NOT CHANGE!!!
-  double threshold = 0.7;
-  const float kp = 1.7, ki = 0.002, kd = 10;
+  double threshold = 0.5;
+  const double kp = 1.7, ki = 0.1, kd = 10;
+  const double kph = 0.72, kih = 0.00015, kdh = 4.15;
 
-  ResetChassis();
-  double drive_direction = distance_in > 0 ? 1 : -1;
+  int drive_direction = distance_in > 0 ? 1 : -1;
   distance_in = distance_in * drive_direction;
   PID pidleft = PID(kp, ki, kd);
   PID pidright = PID(kp, ki, kd);
+  PID pidh = PID(kph, kih, kdh);
 
   pidleft.SetTarget(distance_in);
   pidleft.SetIntegralMax(300);  
-  pidleft.SetProportionalRange(fabs(distance_in) / 2);
-  pidleft.SetErrorTolerance(threshold);
+  pidleft.SetProportionalRange(3);
+  pidleft.SetSmallBigErrorTolerance(threshold, 0);
+  pidleft.SetSmallBigErrorDuration(50, 0);
   pidleft.SetDerivativeTolerance(threshold * 4.5);
   // 5 Iterations
-  pidleft.SetStableTimeDuration(20);
 
   pidright.SetTarget(distance_in);
   pidright.SetIntegralMax(300);  
-  pidright.SetProportionalRange(fabs(distance_in) / 2);
-  pidright.SetErrorTolerance(threshold);
+  pidright.SetProportionalRange(3);
+  pidright.SetSmallBigErrorTolerance(threshold, 0);
+  pidright.SetSmallBigErrorDuration(50, 0);
   pidright.SetDerivativeTolerance(threshold * 4.5);
   // 5 Iterations
-  pidright.SetStableTimeDuration(20);
+  
+  pidh.SetTarget(correct_angle);
+  //pid.SetIntegralMax(300);  
+  pidh.SetProportionalRange(3);
+  
+  pidh.SetSmallBigErrorTolerance(0, 0);
+  pidh.SetSmallBigErrorDuration(0, 0);
+  pidh.SetDerivativeTolerance(0);
+  // 5 Iterations
 
   // Reset the chassis.
   ResetChassis();
-  float start_time = Brain.timer(msec);
-  float leftoutput = 0;
-  float rightoutput = 0;
+  double start_time = Brain.timer(msec);
+  double leftoutput = 0, rightoutput = 0, correction_output = 0;
 
-  float current_left = 0, current_right = 0;
+  double current_left = 0, current_right = 0, current_angle = 0;
 
   while ((!pidleft.TargetArrived() || !pidright.TargetArrived()) && Brain.timer(msec) - start_time <= time_limit_msec) {
     current_left = fabs((GetLeftRotationDegree() / 360.0) * wheel_distance_in);
     current_right = fabs((GetRightRotationDegree() / 360.0) * wheel_distance_in);
+    current_angle = GetInertialHeading();
     leftoutput = pidleft.Update(fabs((GetLeftRotationDegree() / 360.0) * wheel_distance_in));
     rightoutput = pidright.Update(fabs((GetRightRotationDegree() / 360.0) * wheel_distance_in));
-    if(leftoutput > max_output && max_output != 0) {
-      leftoutput = max_output;
+    correction_output = pidh.Update(current_angle);
+    if(leftoutput/* + correction_output */> max_output && max_output != 0/* && correction_output >= 0*/) {
+      leftoutput = max_output/* - correction_output*/;
+    } else if(leftoutput/* + correction_output */< -max_output && max_output != 0) {
+      leftoutput = -max_output/* - correction_output*/;
     }
-    if(rightoutput > max_output && max_output != 0) {
-      rightoutput = max_output;
+    if(rightoutput/* - correction_output */< -max_output && max_output != 0/* && correction_output >= 0*/) {
+      rightoutput = -max_output/* + correction_output*/;
+    } else if(rightoutput/* - correction_output */> max_output && max_output != 0) {
+      rightoutput = max_output/* + correction_output*/;
     }
+    /*
+    leftoutput = leftoutput + correction_output;
+    rightoutput = rightoutput - correction_output;
+    */
     ChassisControl1(leftoutput * drive_direction * pow((distance_in-current_left)/distance_in, 5) + leftoutput*1/2*drive_direction, 
     rightoutput * drive_direction * pow(((distance_in-current_right)/distance_in), 5) + rightoutput*1/2*drive_direction);
     wait(10, msec);
   }
-  Stop(vex::brakeType::hold);
-  ChassisControl1(0, 0);
+  Stop(vex::hold);
   isturning = false;
-  InertialA.setHeading(0, degrees);
-  InertialA.setRotation(0, degrees);
 }
 
-void DriveFor(float distance_in, float time_limit_msec) {
+void DriveToNew(double distance_in, double time_limit_msec, double max_output) {
+  ResetChassis();
+  Stop(vex::brakeType::coast);
+  isturning = true;
   // Current robot setup, 3.25 inch wheel, 60/36 gear ratio.
-  const float wheel_distance_in = (60.0 / 36.0) * 3.25 * 3.14159;
   // Tuned parameters, DO NOT CHANGE!!!
-  const float kp = 3, ki = 0.0001, kd = 50;
+  double threshold = 0.25;
+  const double kp = 1.04, ki = 0.007, kd = 12;
+  const double kph = 0.3, kih = 0, kdh = 2;
 
-  double drive_direction = distance_in > 0 ? 1 : -1;
+  int drive_direction = distance_in > 0 ? 1 : -1;
+  double max_deceleration = 0.3;
   distance_in = distance_in * drive_direction;
+  PID piddistance = PID(kp, ki, kd);
+  PID pidh = PID(kph, kih, kdh);
+
+  piddistance.SetTarget(distance_in);
+  piddistance.SetIntegralMax(300);  
+  piddistance.SetProportionalRange(5);
+  piddistance.SetSmallBigErrorTolerance(threshold, threshold * 3);
+  piddistance.SetSmallBigErrorDuration(50, 250);
+  piddistance.SetDerivativeTolerance(5);
+  // 5 Iterations
+  
+  pidh.SetTarget(correct_angle);
+  //pid.SetIntegralMax(300);  
+  pidh.SetProportionalRange(0);
+  
+  pidh.SetSmallBigErrorTolerance(0, 0);
+  pidh.SetSmallBigErrorDuration(0, 0);
+  pidh.SetDerivativeTolerance(0);
+  // 5 Iterations
 
   // Reset the chassis.
-  ResetChassis();
-  float start_time = Brain.timer(msec);
-  float prev_time = start_time, delta_time, current_time;
-  float l_integral = 0, r_integral = 0;
-  float l_prev_error = 0, r_prev_error = 0;
-  float l_error = 0, r_error = 0;
-  float l_derivative = 0, r_derivative = 0;
+  double start_time = Brain.timer(msec);
+  double leftoutput = 0, rightoutput = 0, correction_output = 0, previous_left_output = 0, previous_right_output = 0;
 
-  bool not_done = true;
+  double current_distance = 0, current_angle = 0;
 
-  float current_left = 0, current_right = 0;
-  //= (GetLeftRotationDegree() / 360.0) * wheel_distance_in;
-  //float currentRight = (GetRightRotationDegree() / 360.0) * wheel_distance_in;
-  // Graph graph = Graph(currentLeft, 250, goalDistance);
-  int j = 0;
-  do {
-    current_time = Brain.timer(msec);
-    delta_time = prev_time == 0 ? 0 : current_time - prev_time;
-    prev_time = current_time;
-
-    current_left = fabs((GetLeftRotationDegree() / 360.0) * wheel_distance_in);
-    current_right = fabs((GetRightRotationDegree() / 360.0) * wheel_distance_in);
-
-    // graph.updateData(currentLeft);
-    // graph.drawGraph();
-
-    l_error = distance_in - current_left;
-    r_error = distance_in - current_right;
-
-    //std::cout << LError << std::endl;
-
-    l_derivative = delta_time == 0 ? 0: (l_error - l_prev_error) / delta_time;
-    r_derivative = delta_time == 0 ? 0: (r_error - r_prev_error) / delta_time;
-    l_prev_error = l_error;
-    r_prev_error = r_error;
-
-    // Ignore the integral if the error is too large.
-    if (fabs(l_error) < 10 || fabs(l_error) < 10) {
-      l_integral += l_error * delta_time;
-      r_integral += r_error * delta_time;
+  while ((!piddistance.TargetArrived()) && Brain.timer(msec) - start_time <= time_limit_msec) {
+    current_distance = (fabs((GetLeftRotationDegree() / 360.0) * wheel_distance_in) + fabs((GetRightRotationDegree() / 360.0) * wheel_distance_in)) / 2;
+    current_angle = GetInertialHeading();
+    leftoutput = piddistance.Update(current_distance);
+    rightoutput = leftoutput;
+    correction_output = pidh.Update(current_angle);
+    if(drive_direction == 1) {
+      leftoutput = leftoutput + correction_output;
+      rightoutput = rightoutput - correction_output;
     } else {
-      l_integral = 0;
-      r_integral = 0;
+      leftoutput = leftoutput - correction_output;
+      rightoutput = rightoutput + correction_output;
     }
 
-    float left_speed = kp * l_error + ki * l_integral + kd * l_derivative;
-    float right_speed = kp * r_error + ki * r_integral + kd * r_derivative;
-    /*
-    if (maxSpeed != 100) {
-      if (fabs(leftDriveSpeed) > maxSpeed) {
-        leftDriveSpeed = maxSpeed * (int(0) < leftDriveSpeed) - (leftDriveSpeed < int(0));
-      }
-      if (fabs(rightDriveSpeed) > maxSpeed) {
-        rightDriveSpeed = maxSpeed * (int(0) < rightDriveSpeed) - (rightDriveSpeed < int(0));
-      }
-    }*/
-    //std::cout << leftDriveSpeed << std::endl;
-    
-    if (l_error < 1) {
-      left_speed = 0;
-      right_speed = 0;
-      j += 2;
-      
-    }
-    ChassisControlPercent(left_speed * drive_direction, right_speed * drive_direction);
-
-    if (((fabs(l_error) < .6) && (fabs(r_error) < .6)) || 
-        (Brain.timer(msec) - start_time > time_limit_msec)) {
-      not_done = false;
-      ///Brain.Screen.printAt(10, 200,  "D1:%.2f, %.2f\n", current_left, current_right);
-      Stop(vex::brakeType::coast);
-      ChassisControlPercent(0, 0);
-    } else {
-      ChassisControlPercent(left_speed * drive_direction, right_speed * drive_direction);
-    }
-    wait(20, msec);
-  } while (not_done);
-}
-
-void DriveFor(float distance_in, float time_limit_msec, bool catapult) {
-  // Current robot setup, 3.25 inch wheel, 60/36 gear ratio.
-  const float wheel_distance_in = (60.0 / 36.0) * 3.25 * 3.14159;
-  // Tuned parameters, DO NOT CHANGE!!!
-  const float kp = 3, ki = 0.0001, kd = 50;
-
-  double drive_direction = distance_in > 0 ? 1 : -1;
-  distance_in = distance_in * drive_direction;
-
-  // Reset the chassis.
-  ResetChassis();
-  float start_time = Brain.timer(msec);
-  float prev_time = start_time, delta_time, current_time;
-  float l_integral = 0, r_integral = 0;
-  float l_prev_error = 0, r_prev_error = 0;
-  float l_error = 0, r_error = 0;
-  float l_derivative = 0, r_derivative = 0;
-
-  bool not_done = true;
-
-  float current_left = 0, current_right = 0;
-  do {
-    current_time = Brain.timer(msec);
-    delta_time = prev_time == 0 ? 0 : current_time - prev_time;
-    prev_time = current_time;
-
-    current_left = fabs((GetLeftRotationDegree() / 360.0) * wheel_distance_in);
-    current_right = fabs((GetRightRotationDegree() / 360.0) * wheel_distance_in);
-    l_error = distance_in - current_left;
-    r_error = distance_in - current_right;
-
-    l_derivative = delta_time == 0 ? 0: (l_error - l_prev_error) / delta_time;
-    r_derivative = delta_time == 0 ? 0: (r_error - r_prev_error) / delta_time;
-    l_prev_error = l_error;
-    r_prev_error = r_error;
-
-    // Ignore the integral if the error is too large.
-    if (fabs(l_error) < 10 || fabs(l_error) < 10) {
-      l_integral += l_error * delta_time;
-      r_integral += r_error * delta_time;
-    } else {
-      l_integral = 0;
-      r_integral = 0;
+    //Max Output Check
+    if(fabs(leftoutput) > fabs(rightoutput) && leftoutput > max_output) {
+      rightoutput = rightoutput / leftoutput * max_output;
+      leftoutput = max_output;
+    } else if(fabs(rightoutput) > fabs(leftoutput) && rightoutput > max_output) {
+      leftoutput = leftoutput / rightoutput * max_output;
+      rightoutput = max_output;
+    } else if(fabs(leftoutput) > fabs(rightoutput) && leftoutput < -max_output) {
+      rightoutput = rightoutput / leftoutput * -max_output;
+      leftoutput = -max_output;
+    } else if(fabs(rightoutput) > fabs(leftoutput) && rightoutput < -max_output) {
+      leftoutput = leftoutput / rightoutput * -max_output;
+      rightoutput = -max_output;
     }
 
-    if (catapult) {
-      if (LimitSwitchA.pressing() == 0) {
-        catapult_motor.spin(fwd,100*0.128,volt);
-      } else {
-        catapult_motor.stop(hold);
-      }
+    //Max Acceleration/Deceleration Check
+    if(previous_left_output - leftoutput > max_deceleration) {
+      leftoutput = previous_left_output - max_deceleration;
     }
-
-    float left_speed = kp * l_error + ki * l_integral + kd * l_derivative;
-    float right_speed = kp * r_error + ki * r_integral + kd * r_derivative;
-    if (((fabs(l_error) < .5) && (fabs(r_error) < .5)) || 
-        (Brain.timer(msec) - start_time > time_limit_msec)) {
-      not_done = false;
-      Stop(vex::brakeType::coast);
-      ChassisControlPercent(0, 0);
-    } else {
-      ChassisControlPercent(left_speed * drive_direction * 0.85, right_speed * drive_direction * 0.85);
+    if(previous_right_output - rightoutput > max_deceleration) {
+      rightoutput = previous_right_output - max_deceleration;
     }
-
+    previous_left_output = leftoutput;
+    previous_right_output = rightoutput;
+    ChassisControl1(leftoutput * drive_direction, rightoutput * drive_direction);
     wait(10, msec);
-  } while (not_done);
+  }
+  Brain.Screen.print(GetLeftRotationDegree()/360 * wheel_distance_in);
+  Brain.Screen.newLine();
+  Brain.Screen.print(GetRightRotationDegree()/360 * wheel_distance_in);
+  Brain.Screen.newLine();
+  Stop(vex::hold);
+  isturning = false;
 }
 
-void Grab(float power) {
+void Grab(double power) {
   intake_motor.spin(fwd, 0.128 * power, voltageUnits::volt);
 }
 
@@ -610,61 +481,293 @@ void Stop(brakeType type) {
   right_chassis3.stop(type);
 }
 
-void PullCatapult(void) {
-  do {
+void PullCatapult() {
+  int start_time = Brain.timer(msec);
+  while(LimitSwitchA.pressing() == 0 && Brain.timer(msec) - start_time < 5000) {
     catapult_motor.spin(fwd, 100 * 0.128, volt);
-  } while(LimitSwitchA.pressing() == 0);;
-  catapult_motor.stop(hold);
+    wait(10, msec);
+  }
+  if(Brain.timer(msec) - start_time > 5000) {
+    catapult_motor.stop(coast);
+  } else {
+    catapult_motor.stop(hold);
+  }
 }
 
-void FireCatapult(void) {
-  do{
+void FireCatapult() {
+  while(LimitSwitchA.pressing() == 1) {
     catapult_motor.spin(fwd, 100 * 0.128, volt);
-  } while(LimitSwitchA.pressing() == 1);
+    wait(10, msec);
+  }
   
   catapult_motor.stop(hold);
   
   // Wait for the limited switch to be fully released.
-  do {
+  while(LimitSwitchA.pressing() == 1) {
     wait(10, msec);
-  } while(LimitSwitchA.pressing() == 1);
+  }
   wait(100, msec);
 }
 
-void PullCatapultStop(void) {
-  do {
-    catapult_motor.spin(fwd, 100*0.128, volt);
-  } while(LimitSwitchA.pressing() == 0);
-  catapult_motor.stop(hold);
-  catapult_motor.spin(fwd,-100*0.128,volt);
-  wait(160, msec);
-  catapult_motor.stop(hold);
-}
-
-void CatapultStop(void) {
-  if(LimitSwitchA.pressing() == 0) {
-    PullCatapult();
-  }
-  catapult_motor.spin(fwd,-100*0.128,volt);
-  wait(250, msec);
-  catapult_motor.stop(hold);
-}
-
-void AngleStabilization(void) {
-  float initialheading = 0;
+void AngleStabilization() {
+  double initialheading = 0, newheading = 0;
   while(true)  {
     initialheading = GetInertialHeading();
-    if(isturning == false && (initialheading < -3 || initialheading > 3)) {
-      TurnSmallNoBool(-initialheading, 2000);
+    wait(50, msec);
+    newheading = GetInertialHeading();
+    if(isturning == false && fabs(initialheading - newheading) > 3) {
+      TurnSmallNoBool(initialheading, 1000);
+    }
+  }
+}
+
+void GrabCheck() {
+  Grab(40);
+  do {
+    wait(10, msec);
+  } while(LimitSwitchA.pressing() == 0);
+  Grab(70);
+}
+
+void GrabCheckFast() {
+  Grab(45);
+  do {
+    wait(10, msec);
+  } while(LimitSwitchA.pressing() == 0);
+  Grab(100);
+}
+
+void CurveCircle(double result_angle_deg, double center_radius, double time_limit_msec, double max_output) {
+  double in_arc, out_arc;
+  double real_angle = 0, current_angle = 0;
+  double ratio, result_angle;
+  const double start_angle = GetInertialHeading();
+  result_angle = result_angle_deg * 3.14159265359 / 180;
+  in_arc = fabs((fabs(center_radius) - 5.25) * result_angle);
+  out_arc = fabs((fabs(center_radius) + 5.25) * result_angle);
+  ratio = in_arc / out_arc;
+  ResetChassis();
+  Stop(vex::brakeType::coast);
+  isturning = true;
+  // Tuned parameters, DO NOT CHANGE!!!
+  double threshold = 0.5;
+  const double kp = 1.6, ki = 0, kd = 10;
+  const double kpt = 0.6, kit = 0.0002, kdt = 4.2;
+
+  int curve_direction = center_radius > 0 ? 1 : -1;
+  int drive_direction = 0;
+  if ((curve_direction == 1 && result_angle_deg > 0) || (curve_direction == -1 && result_angle_deg < 0)) {
+    drive_direction = 1;
+  } else {
+    drive_direction = -1;
+  }
+
+  PID pidout = PID(kp, ki, kd);
+  PID pidturn = PID(kpt, kit, kdt);
+  PID pidturnarrived = PID(kpt, kit, kdt);
+
+  pidout.SetTarget(out_arc);
+  pidout.SetIntegralMax(300);  
+  pidout.SetProportionalRange(3);
+  pidout.SetSmallBigErrorTolerance(threshold, 0);
+  pidout.SetSmallBigErrorDuration(100, 0);
+  pidout.SetDerivativeTolerance(threshold * 4.5);
+  // 5 Iterations
+  
+  pidturn.SetTarget(0);
+  pidturn.SetIntegralMax(100);  
+  pidturn.SetProportionalRange(0.3);
+  
+  pidturn.SetSmallBigErrorTolerance(0, 0);
+  pidturn.SetSmallBigErrorDuration(0, 0);
+  pidturn.SetDerivativeTolerance(0);
+  // 5 Iterations
+
+  pidturnarrived.SetTarget(result_angle_deg);
+  pidturnarrived.SetSmallBigErrorTolerance(1, 0);
+  pidturnarrived.SetSmallBigErrorDuration(400, 0);
+
+  // Reset the chassis.
+  ResetChassis();
+  double start_time = Brain.timer(msec);
+  double left_output = 0, right_output = 0, correction_output = 0;
+  double current_right = 0, current_left = 0;
+
+  if (curve_direction == -1) {
+    while (!pidout.TargetArrived() && Brain.timer(msec) - start_time <= time_limit_msec && !pidturnarrived.TargetArrived()) {
+      current_angle = fabs(GetInertialHeading() - start_angle);
+      current_right = fabs((GetRightRotationDegree() / 360.0) * wheel_distance_in);
+      real_angle = fabs(current_right/out_arc * result_angle_deg);
+      pidturn.SetTarget(real_angle);
+      right_output = pidout.Update(current_right);
+      left_output = right_output * ratio;
+      correction_output = pidturn.Update(fabs(current_angle));
+      right_output = right_output + correction_output;
+      left_output = left_output - correction_output;
+
+      //Max Output Check
+      if(fabs(left_output) > fabs(right_output) && left_output > max_output) {
+        right_output = right_output / left_output * max_output;
+        left_output = max_output;
+      } else if(fabs(right_output) > fabs(left_output) && right_output > max_output) {
+        left_output = left_output / right_output * max_output;
+        right_output = max_output;
+      } else if(fabs(left_output) > fabs(right_output) && left_output < -max_output) {
+        right_output = right_output / left_output * -max_output;
+        left_output = -max_output;
+      } else if(fabs(right_output) > fabs(left_output) && right_output < -max_output) {
+        left_output = left_output / right_output * -max_output;
+        right_output = -max_output;
+      }
+
+      ChassisControl1(left_output * drive_direction, right_output * drive_direction);
+      wait(10, msec);
+    }
+  } else {
+    while (!pidout.TargetArrived() && Brain.timer(msec) - start_time <= time_limit_msec && !pidturnarrived.TargetArrived()) {
+      current_angle = fabs(GetInertialHeading() - start_angle);
+      current_left = fabs((GetLeftRotationDegree() / 360.0) * wheel_distance_in);
+      real_angle = fabs(current_left/out_arc * result_angle_deg);
+      pidturn.SetTarget(real_angle);
+      left_output = pidout.Update(current_left);
+      right_output = left_output * ratio;
+      correction_output = pidturn.Update(fabs(current_angle));
+      left_output = left_output + correction_output;
+      right_output = right_output - correction_output;
+
+      //Max Output Check
+      if(fabs(left_output) > fabs(right_output) && left_output > max_output) {
+        right_output = right_output / left_output * max_output;
+        left_output = max_output;
+      } else if(fabs(right_output) > fabs(left_output) && right_output > max_output) {
+        left_output = left_output / right_output * max_output;
+        right_output = max_output;
+      } else if(fabs(left_output) > fabs(right_output) && left_output < -max_output) {
+        right_output = right_output / left_output * -max_output;
+        left_output = -max_output;
+      } else if(fabs(right_output) > fabs(left_output) && right_output < -max_output) {
+        left_output = left_output / right_output * -max_output;
+        right_output = -max_output;
+      }
+
+      ChassisControl1(left_output * drive_direction, right_output * drive_direction);
+      wait(10, msec);
+    }
+  }
+  Stop(vex::brakeType::hold);
+  correct_angle = correct_angle + result_angle_deg;
+  isturning = false;
+}
+
+void DriveToSeperate(double l_distance_in, double r_distance_in, double time_limit_msec, double max_output) {
+  ResetChassis();
+  Stop(vex::brakeType::coast);
+  isturning = true;
+  // Current robot setup, 3.25 inch wheel, 60/36 gear ratio.
+  // Tuned parameters, DO NOT CHANGE!!!
+  double threshold = 0.5;
+  const double kp = 1.7, ki = 0.002, kd = 10;
+
+  double l_drive_direction = l_distance_in > 0 ? 1 : -1;
+  double r_drive_direction = r_distance_in > 0 ? 1 : -1;
+  l_distance_in = l_distance_in * l_drive_direction;
+  r_distance_in = r_distance_in * l_drive_direction;
+  PID pidleft = PID(kp, ki, kd);
+  PID pidright = PID(kp, ki, kd);
+
+  pidleft.SetTarget(l_distance_in);
+  pidleft.SetIntegralMax(300);  
+  pidleft.SetProportionalRange(fabs(l_distance_in) / 2);
+  pidleft.SetSmallBigErrorTolerance(threshold, 0);
+  pidleft.SetSmallBigErrorDuration(50, 0);
+  pidleft.SetDerivativeTolerance(threshold * 4.5);
+  // 5 Iterations
+
+  pidright.SetTarget(r_distance_in);
+  pidright.SetIntegralMax(300);  
+  pidright.SetProportionalRange(fabs(r_distance_in) / 2);
+  pidright.SetSmallBigErrorTolerance(threshold, 0);
+  pidright.SetSmallBigErrorDuration(50, 0);
+  pidright.SetDerivativeTolerance(threshold * 4.5);
+  // 5 Iterations
+
+  // Reset the chassis.
+  ResetChassis();
+  double start_time = Brain.timer(msec);
+  double leftoutput = 0;
+  double rightoutput = 0;
+
+  double current_left = 0, current_right = 0;
+
+  while ((!pidleft.TargetArrived() || !pidright.TargetArrived()) && Brain.timer(msec) - start_time <= time_limit_msec) {
+    current_left = fabs((GetLeftRotationDegree() / 360.0) * wheel_distance_in);
+    current_right = fabs((GetRightRotationDegree() / 360.0) * wheel_distance_in);
+    leftoutput = pidleft.Update(fabs((GetLeftRotationDegree() / 360.0) * wheel_distance_in));
+    rightoutput = pidright.Update(fabs((GetRightRotationDegree() / 360.0) * wheel_distance_in));
+    ChassisControl1(leftoutput * l_drive_direction * pow((l_distance_in-current_left)/l_distance_in, 5) + leftoutput*1/2*l_drive_direction, 
+    rightoutput * r_drive_direction * pow(((r_distance_in-current_right)/r_distance_in), 5) + rightoutput*1/2*r_drive_direction);
+    wait(10, msec);
+  }
+  Stop(vex::brakeType::hold);
+  ChassisControl1(0, 0);
+  isturning = false;
+}
+
+void WiggleForward(double distance_in, double wiggle_amplifier, double wiggle_frequency, double forward_speed, double wiggle_time, double drive_time_limit_msec) {
+  ResetChassis();
+  Stop(vex::brakeType::coast);
+  isturning = true;
+  const double wheel_distance_in = (36.0 / 60.0) * 3.25 * 3.14159;
+  double start_time = Brain.timer(msec);
+  double current_time = 0;
+  while(Brain.timer(msec) - start_time < wiggle_time) {
+    ChassisControl1(forward_speed + wiggle_amplifier * sin(current_time * wiggle_frequency), forward_speed - wiggle_amplifier * sin(current_time * wiggle_frequency));
+    current_time = Brain.timer(msec) - start_time;
+    wait(10, msec);
+  }
+  DriveToSeperate(distance_in - (GetLeftRotationDegree() / 360.0) * wheel_distance_in, distance_in - (GetRightRotationDegree() / 360.0) * wheel_distance_in, 0, drive_time_limit_msec);
+  isturning = false;
+}
+
+void distance_check() {
+  Grab(100);
+  while (DistanceA.objectDistance(inches) > 3) {
+    wait(10, msec);
+  }
+  wait(100, msec);
+  Grab(0);
+}
+
+void grab_wait() {
+  while((GetLeftRotationDegree() + GetRightRotationDegree())/720 * wheel_distance_in < 90) {
+    wait(10, msec);
+  }
+  Grab(0);
+}
+
+void heading_correction() {
+  double output = 0;
+  const double kp = 0.72;
+  const double ki = 0.00015;
+  const double kd = 4.15;
+  PID pid = PID(kp, ki, kd);
+  
+  pid.SetTarget(correct_angle);
+  //pid.SetIntegralMax(300);  
+  pid.SetProportionalRange(correct_angle);
+  
+  pid.SetSmallBigErrorTolerance(0, 0);
+  pid.SetSmallBigErrorDuration(0, 0);
+  pid.SetDerivativeTolerance(0);
+  // 5 Iterations
+  
+  // Start the PID loop.
+  while(true) {
+    pid.SetTarget(correct_angle);
+    if(isturning == false) {
+      output = pid.Update(GetInertialHeading());
+      ChassisControl1(output, -output);
     }
     wait(10, msec);
   }
-}
-
-void GrabCheck(void) {
-  Grab(35);
-  do {
-    wait(10, msec);
-  } while(LimitSwitchA.pressing() == 0);
-  Grab(72);
 }

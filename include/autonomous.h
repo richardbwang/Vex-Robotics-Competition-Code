@@ -1,0 +1,21 @@
+extern int AutonSelected;
+extern int AutonMin;
+extern int AutonMax;
+
+void drawGUI();
+void selectAuton();
+void LeftAuton();
+void LeftAutonRoller();
+void LeftAuton2();
+void RightAuton();
+void RightAuton2();
+void LeftAuton9();
+void RightAuton9();
+void SoloAWP();
+void SoloAWP2();
+void SoloAWP9();
+void ProgSkills();
+void ProgSkillsLowGoal();
+void TestPID();
+void SoloAWP11();
+void Left8();

@@ -4,13 +4,17 @@
 #include <cmath>
 
 // Constructor
-PID::PID(float new_kp, float new_ki, float new_kd)
-  : arrived(false),
-    stable_time_duration(50), 
-    check_time(0.0),
-    first_time(true),
-    proportional_range(50),
-    integral_max(20) {
+PID::PID(double new_kp, double new_ki, double new_kd)
+  : arrived(false), 
+    small_error_tolerance(1), 
+    big_error_tolerance(3), 
+    small_error_duration(100), 
+    big_error_duration(500), 
+    small_check_time(0), 
+    big_check_time(0), 
+    first_time(true), 
+    proportional_range(50), 
+    integral_max(500) {
   // Set up the Coefficient.
   kp = new_kp;
   ki = new_ki;
@@ -21,25 +25,26 @@ PID::PID(float new_kp, float new_ki, float new_kd)
   index = 1;
 }
 
-void PID::SetCoefficient(float new_kp, float new_ki, float new_kd) {
+void PID::SetCoefficient(double new_kp, double new_ki, double new_kd) {
   kp = new_kp;
   ki = new_ki;
   kd = new_kd;
 }
 
-void PID::SetTarget(float new_target) { 
+void PID::SetTarget(double new_target) { 
   target = new_target;
 }
 
-void PID::SetErrorTolerance(float new_error_tolerance) { 
-  error_tolerance = new_error_tolerance;
+void PID::SetSmallBigErrorTolerance(double new_small_error_tolerance, double new_big_error_tolerance) { 
+  small_error_tolerance = new_small_error_tolerance;
+  big_error_tolerance = new_big_error_tolerance;
 }
 
-void PID::SetIntegralMax(float new_integral_max) { 
+void PID::SetIntegralMax(double new_integral_max) { 
   integral_max = new_integral_max;
 }
 
-void PID::SetProportionalRange(float new_proportional_range) { 
+void PID::SetProportionalRange(double new_proportional_range) { 
   proportional_range = new_proportional_range;
 }
 
@@ -47,28 +52,27 @@ void PID::ClearSumError() {
   sum_error = 0;
 }
 
-void PID::SetDerivativeTolerance(float new_derivative_tolerance) { 
+void PID::SetDerivativeTolerance(double new_derivative_tolerance) { 
   derivative_tolerance = new_derivative_tolerance;
 }
 
-void PID::SetStableTimeDuration(
-    float new_stable_time_duration_msec) { 
-  stable_time_duration = new_stable_time_duration_msec;
+void PID::SetSmallBigErrorDuration(double new_small_error_duration, double new_big_error_duration) { 
+  small_error_duration = new_small_error_duration;
+  big_error_duration = new_big_error_duration;
 }
-
 bool PID::TargetArrived() { 
   return arrived;
 }
 
-float PID::GetI() { 
+double PID::GetI() { 
   return ki;
 }
 
-float PID::GetOutput() { 
+double PID::GetOutput() { 
   return output;
 }
 
-int PID::Sign(float number) {
+int PID::Sign(double number) {
   if (number > 0) {
     return 1;
   } else if (number < 0) {
@@ -77,7 +81,7 @@ int PID::Sign(float number) {
   return 0;
 }
 
-float PID::Update(float input) {
+double PID::Update(double input) {
   // Calculate current error
   current_error = target - input; 
   if (first_time) {
@@ -87,7 +91,8 @@ float PID::Update(float input) {
     // Need to skip derivative. 
     previous_error = current_error;
     sum_error = 0;
-    check_time = Brain.timer(msec);
+    small_check_time = Brain.timer(msec);
+    big_check_time = Brain.timer(msec);
   }
 
   // Calculate proportional
@@ -122,15 +127,26 @@ float PID::Update(float input) {
   // Calculate integral
   integral = ki * sum_error;
   
-  if (fabs(current_error) <= error_tolerance && 
+  if (fabs(current_error) <= small_error_tolerance && 
       fabs(derivative) <= derivative_tolerance) { 
     // Exit when staying in tolerated region and 
     // maintaining a low enough speed for enough time
-    if (Brain.timer(msec) - check_time >= stable_time_duration) {
+    if (Brain.timer(msec) - small_check_time >= small_error_duration) {
       arrived = true;
     }
   } else {
-    check_time = Brain.timer(msec);
+    small_check_time = Brain.timer(msec);
+  }
+
+  if (fabs(current_error) <= big_error_tolerance && 
+      fabs(derivative) <= derivative_tolerance) { 
+    // Exit when staying in tolerated region and 
+    // maintaining a low enough speed for enough time
+    if (Brain.timer(msec) - big_check_time >= big_error_duration) {
+      arrived = true;
+    }
+  } else {
+    big_check_time = Brain.timer(msec);
   }
 
   output = proportional + integral + derivative;
