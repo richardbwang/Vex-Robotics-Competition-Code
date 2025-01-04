@@ -16,7 +16,7 @@ class PID {
 
   // Set the allowed proportional range, ignore the integal
   // value if the proportional is out of this range.
-  void SetProportionalRange(double new_proportional_range);
+  void SetIntegralRange(double new_integral_range);
   
   // Set error and derivative tolerance.
   void SetSmallBigErrorTolerance(double new_small_error_tolerance, double new_big_error_tolerance);
@@ -70,7 +70,7 @@ class PID {
 
   // Do not consider integral if the proportional value
   // is out of this range. 
-  double proportional_range;
+  double integral_range;
 
   // Max integral value allowed.
   double integral_max;
@@ -87,7 +87,6 @@ class PID {
   // Calculated PID output. 
   double output;
 
-  int index;
 };
 
 #endif

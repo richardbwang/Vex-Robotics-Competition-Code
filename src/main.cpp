@@ -11,20 +11,21 @@
 // Robot Configuration:
 // [Name]               [Type]        [Port(s)]
 // Controller1          controller                    
-// LimitSwitchA         limit         A               
-// catapult_motor       motor         16              
-// intake_motor         motor         2               
-// left_chassis1        motor         14              
-// left_chassis2        motor         13              
-// right_chassis1       motor         18              
-// right_chassis2       motor         17              
-// left_chassis3        motor         12              
-// right_chassis3       motor         19              
-// InertialA            inertial      4               
-// DigitalOutC          digital_out   C               
-// DistanceA            distance      3               
+// puncher_motor        motor         10              
+// intake_motor         motor         20              
+// left_chassis1        motor         17              
+// left_chassis2        motor         16              
+// right_chassis1       motor         14              
+// right_chassis2       motor         13              
+// left_chassis3        motor         18              
+// right_chassis3       motor         15              
+// InertialA            inertial      19              
+// DigitalOutA          digital_out   A               
+// Distance9            distance      9               
 // DigitalOutD          digital_out   D               
 // DigitalOutE          digital_out   E               
+// DigitalOutB          digital_out   B               
+// DigitalOutC          digital_out   C               
 // ---- END VEXCODE CONFIGURED DEVICES ----
 
 #include "vex.h"
@@ -86,21 +87,20 @@ void pre_auton(void) {
 /*---------------------------------------------------------------------------*/
 
 void autonomous(void) {
-  AutonSelected = 1;
   switch (AutonSelected) {
     case 1:
       //Left Autonomous
-      Left8();
+      LeftAuton8();
     break;
 
     case 2:
       //Right Autonomous
-      RightAuton();
+      RightAuton8();
     break;
 
     case 3:
       //Solo Autonomous Win Point
-      SoloAWP11();
+      SoloAWP8();
     break;
 
     case 4:
@@ -111,6 +111,11 @@ void autonomous(void) {
     case 5:
       //PID Test
       TestPID();
+    break;
+
+    case 6:
+      //Programming Skills
+      LeftAuton9();
     break;
   }
 }
@@ -123,7 +128,7 @@ void autonomous(void) {
 /*  a VEX Competition.                                                       */
 /*                                                                           */
 /*  You must modify the code to add your own robot specific commands here.   */
-/*---------------------------------------------------------------------------*/
+/*---------------------------------------------------------------------------*/               
 
 int Ch1, Ch2, Ch3, Ch4;
 bool L1, L2, R1, R2, BtnA, BtnB, BtnX, BtnY, BtnU, BtnD, BtnL, BtnR;//声明
@@ -131,10 +136,11 @@ int dipan_flag = 0;
 int xi_flag = 0, xi_flag1 = 0;
 
 void usercontrol(void) {
+  headingcorrection = false;
   Brain.Screen.clearScreen();
-  DigitalOutC.set(true);
-  
+  bool setup_catapult = true;
   // User control code here, inside the loop
+  
   while (1) {
    //{
       //int Brain_time_111=Brain.timer(msec);
@@ -147,7 +153,7 @@ void usercontrol(void) {
     // update your motors, etc.
      // ........................................................................
      // User control code here, inside the loop
-  
+
     Ch1 = Controller1.Axis1.value();
     Ch2 = Controller1.Axis2.value();
     Ch3 = Controller1.Axis3.value();
@@ -165,51 +171,63 @@ void usercontrol(void) {
     BtnL = Controller1.ButtonLeft.pressing();
     BtnR = Controller1.ButtonRight.pressing();
     Brain.Screen.setCursor(1, 1);
-    Brain.Screen.print(LimitSwitchA.pressing());
+
 //=========================================================================
     if(abs(Ch4) < 12 && abs(Ch3) > 12 ) {
-      ChassisControlReverse(Ch3, Ch3);
+      ChassisControl(Ch3, Ch3);
       dipan_flag = 0;
     } else if(abs(Ch4) >= 12 ) {
-      ChassisControlReverse((Ch3 - Ch4) * 0.55, (Ch3 + Ch4) * 0.55);
+      ChassisControl((Ch3 + Ch4) * 0.55, (Ch3 - Ch4) * 0.55);
       dipan_flag = 1;
     } else {
       Stop(dipan_flag == 0 ? coast : brake);
     }
 //=========================================================================
     
-    if(BtnA) {
-      catapult_motor.spin(fwd,100*0.128, volt);
-    } else if(LimitSwitchA.pressing() == 0) {
-      catapult_motor.spin(fwd,100*0.128, volt);
-    } else {
-      catapult_motor.stop(hold);
-    }
+
 
 //=========================================================================
-    if (R1) {
-      intake_motor.spin(fwd, 0.128 * -70, voltageUnits::volt);
-    } else if(R2 && LimitSwitchA.pressing() == 1) {
-      intake_motor.spin(fwd, 0.128 * 70, voltageUnits::volt);
-    } else { 
-      intake_motor.stop(hold);
+    if(BtnA) {
+      DigitalOutA.set(true);
+      wait(130, msec); 
+      puncher_motor.spin(fwd, -100 * 0.128, volt);
+    } else if(Distance9.value() > distance_value) {
+      DigitalOutA.set(false);
+      puncher_motor.spin(fwd, -100 * 0.128, volt);
+    } else {
+      puncher_motor.stop(hold);
     }
-   
+
+    if(BtnB) {
+      DigitalOutA.set(true);
+    }
+
+    if(BtnY) {
+      DigitalOutC.set(true);
+    }
+
     if (L1) {
       if (L2) {
          DigitalOutD.set(true);
-         DigitalOutE.set(true);
       }
-    } else if (L2) {
-      DigitalOutC.set(false);
-    }
- 
-    if (BtnY) {
-      catapult_motor.spin(fwd,100*0.128, volt);
-      wait(200, msec);
-      catapult_motor.spin(fwd, 0, volt);
-      DigitalOutC.set(true);
     } 
+
+    if (R2) {
+      intake_motor.spin(fwd, 0.128 * 100, voltageUnits::volt);
+    } else if(R1) {
+      intake_motor.spin(fwd, 0.128 * -100, voltageUnits::volt);
+    } else { 
+      intake_motor.stop(hold);
+    }
+
+
+    if (BtnX) {
+      setup_catapult = false;
+    }
+
+    if (BtnB) {
+      setup_catapult = true;
+    }
     // Sleep the task for a short amount of time to prevetning wasting 
     // too much resources.
     wait(10, msec); 

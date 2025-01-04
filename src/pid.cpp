@@ -13,7 +13,7 @@ PID::PID(double new_kp, double new_ki, double new_kd)
     small_check_time(0), 
     big_check_time(0), 
     first_time(true), 
-    proportional_range(50), 
+    integral_range(50), 
     integral_max(500) {
   // Set up the Coefficient.
   kp = new_kp;
@@ -21,8 +21,6 @@ PID::PID(double new_kp, double new_ki, double new_kd)
   kd = new_kd;
   // Not arrived initially.
   arrived = false;
-
-  index = 1;
 }
 
 void PID::SetCoefficient(double new_kp, double new_ki, double new_kd) {
@@ -44,8 +42,8 @@ void PID::SetIntegralMax(double new_integral_max) {
   integral_max = new_integral_max;
 }
 
-void PID::SetProportionalRange(double new_proportional_range) { 
-  proportional_range = new_proportional_range;
+void PID::SetIntegralRange(double new_integral_range) { 
+  integral_range = new_integral_range;
 }
 
 void PID::ClearSumError() { 
@@ -104,7 +102,7 @@ double PID::Update(double input) {
   // Record current error
   previous_error = current_error; 
   
-  if (fabs(proportional) >= proportional_range) { 
+  if (fabs(current_error) >= integral_range) { 
     // integral = 0 if proportinal > proportional_range
     sum_error = 0;
   } else { 
@@ -116,7 +114,7 @@ double PID::Update(double input) {
   }
 
   if (Sign(sum_error) != Sign(current_error) || 
-      (fabs(current_error) <= error_tolerance)) {
+      (fabs(current_error) <= small_error_tolerance)) {
     // Clear integral if overshoot or current_error is very small. 
     // This is to stablize the movement.
     sum_error = 0;
@@ -150,14 +148,6 @@ double PID::Update(double input) {
   }
 
   output = proportional + integral + derivative;
-  if (fabs(current_error) < 2) {
-    if (arrived) {
-      //Brain.Screen.printAt(15, index * 18, "Mid: %.2f, %.2f, %.2f, %.2f, %.2f TURE", current_error, proportional, integral, derivative, output); 
-    } else {
-      //Brain.Screen.printAt(15, index * 18, "Mid: %.2f, %.2f, %.2f, %.2f, %.2f FALSE", current_error, proportional, integral, derivative, output);      
-    }
-    index++;
-  }
 
   return output;
 }
