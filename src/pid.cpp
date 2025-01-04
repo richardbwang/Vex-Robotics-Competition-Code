@@ -13,7 +13,7 @@ PID::PID(double new_kp, double new_ki, double new_kd)
     small_check_time(0), 
     big_check_time(0), 
     first_time(true), 
-    integral_range(50), 
+    integral_range(0), 
     integral_max(500) {
   // Set up the Coefficient.
   kp = new_kp;
@@ -102,12 +102,12 @@ double PID::Update(double input) {
   // Record current error
   previous_error = current_error; 
   
-  if (fabs(current_error) >= integral_range) { 
+  if (fabs(current_error) >= integral_range && integral_range != 0) { 
     // integral = 0 if proportinal > proportional_range
     sum_error = 0;
   } else { 
     sum_error += current_error;
-    if (fabs(sum_error) * ki > integral_max) {
+    if (fabs(sum_error) * ki > integral_max && integral_max != 0) {
       // Limit integral to integral_max
       sum_error = Sign(sum_error) * integral_max / ki;
     }

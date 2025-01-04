@@ -9,14 +9,14 @@
 
 int AutonSelected = 1;
 int AutonMin = 1;
-int AutonMax = 5;
+int AutonMax = 3;
 
 void drawGUI() {
   // Draws 2 buttons to be used for selecting auto
   Brain.Screen.clearScreen();
   Brain.Screen.printAt(1, 40, "Select Auton then Press Go");
   Brain.Screen.printAt(1, 180, "Auton Selected =  %d   ", AutonSelected);
-  Brain.Screen.printAt(1, 215, "Auton Selected =  Left 8");
+  Brain.Screen.printAt(1, 215, "Auton Selected =  Far");
   Brain.Screen.setFillColor(red);
   Brain.Screen.drawRectangle(20, 50, 100, 100);
   Brain.Screen.drawCircle(300, 75, 25);
@@ -43,23 +43,23 @@ void selectAuton() {
 
     switch(AutonSelected) {
     case 1:
-      Brain.Screen.printAt(1, 215, "Auton Selected =  Left 8");
+      Brain.Screen.printAt(1, 215, "Auton Selected =  Far");
     break;
 
     case 2:
-      Brain.Screen.printAt(1, 215, "Auton Selected =  Right 8");
+      Brain.Screen.printAt(1, 215, "Auton Selected =  Far3");
     break;
 
     case 3:
-      Brain.Screen.printAt(1, 215, "Auton Selected =  SoloAWP 8");
+      Brain.Screen.printAt(1, 215, "Auton Selected =  Near");
     break;
 
     case 4:
-      Brain.Screen.printAt(1, 215, "Auton Selected =  Skills");
+      Brain.Screen.printAt(1, 215, "Auton Selected =  SoloAWP");
     break;
 
     case 5:
-      Brain.Screen.printAt(1, 215, "Auton Selected =  PIDTest");
+      Brain.Screen.printAt(1, 215, "Auton Selected =  TestPID");
     break;
   }
   }
@@ -69,23 +69,23 @@ void selectAuton() {
 
     switch(AutonSelected) {
     case 1:
-      Brain.Screen.printAt(1, 215, "Auton Selected =  Left 8");
+      Brain.Screen.printAt(1, 215, "Auton Selected =  Far");
     break;
 
     case 2:
-      Brain.Screen.printAt(1, 215, "Auton Selected =  Right 8");
+      Brain.Screen.printAt(1, 215, "Auton Selected =  Far3");
     break;
 
     case 3:
-      Brain.Screen.printAt(1, 215, "Auton Selected =  SoloAWP 8");
+      Brain.Screen.printAt(1, 215, "Auton Selected =  Near");
     break;
 
     case 4:
-      Brain.Screen.printAt(1, 215, "Auton Selected =  Skills");
+      Brain.Screen.printAt(1, 215, "Auton Selected =  SoloAWP");
     break;
 
     case 5:
-      Brain.Screen.printAt(1, 215, "Auton Selected =  PIDTest");
+      Brain.Screen.printAt(1, 215, "Auton Selected =  TestPID");
     break;
   }
   }
@@ -101,357 +101,223 @@ void selectAuton() {
   Brain.Screen.setFillColor(black);
 }
 
-void LeftAuton12() {
-  double begin_time = Brain.timer(msec);
-  thread pullsling = thread(PullSling);
+void FarBar() {
   thread headingcorrection = thread(heading_correction);
-  
-  //pick up disc and spin the roller
-  Grab(100);
-  DriveTo(4, 800);
-  thread grabwait = thread(grab_wait);
-  CurveCircle(20, -19, 1000);
+  double begin_time = Brain.timer(msec);
+  TurnToAngle(-25, 500);
+  CurveCircle(-90, -35, 1500);
   Grab(-100);
-  wait(250, msec);
+  DriveTo(24, 1400);
+  DriveTo(-17, 1400);
   Grab(0);
-  DriveTo(3, 800);
+  TurnToAngle(-163, 1000);
   Grab(100);
-  TurnToAngle(90, 1000);
-  DigitalOutB.set(true);
-  CurveCircle(34, -11, 1100);
-  FireSling();
-  DigitalOutB.set(false);
-  thread pullsling2 = thread(PullSling);
-  Grab(100);
-  wait(2000, msec);
-  Grab(0);
-  FireSling();
-  thread pullsling3 = thread(PullSling);
-  DigitalOutB.set(true);
-  DriveTo(-3, 800);
-  TurnToAngle(104, 1000);
-  Grab(100);
-  DriveTo(17, 2000);
-  DigitalOutB.set(false);
-  DriveTo(18, 2000);
-  TurnToAngle(13, 1000);
-  FireSling();
-  thread pullsling4 = thread(PullSling);
-  DriveTo(-29.5, 2500);
-  TurnToAngle(45, 1000);
-  Grab(100);
-  DriveTo(32, 4000, 8);
-  TurnToAngle(4, 900);
-  FireSling();
-  thread pullsling5 = thread(PullSling);
-
-  //release auton tensioning
-  //DigitalOutC.set(true);
-  
+  DriveTo(62, 2400);
+  Swing(-180, 1, 400);
+  TurnToAngle(-218, 800);
+  DriveTo(-27, 1500);
+  TurnToAngle(-360, 900);
+  Grab(-100);
+  wait(300, msec);
+  DriveTo(27, 1400);
+  DriveTo(-10, 1200);
+  TurnToAngle(-405, 800);
+  DriveTo(-45, 2000);
+  Arm(100);
   double end_time = Brain.timer(msec);
   Brain.Screen.newLine();
-  Brain.Screen.printAt(110, 110, "%f", end_time - begin_time);
+  Brain.Screen.printAt(80, 80, "%f", end_time - begin_time);
 }
 
-void LeftAuton9() {
-  double begin_time = Brain.timer(msec);
-  thread pullsling = thread(PullSling);
+void Far3() {
   thread headingcorrection = thread(heading_correction);
-  Grab(100);
-  CurveCircle(-30, -30, 2000);
-  DriveTo(-2, 800);
-  TurnToAngle(-12, 1000);
-  FireSling();
-  thread pullsling2 = thread(PullSling);
-  TurnToAngle(0, 1000);
-  DriveTo(-16, 2000);
+  double begin_time = Brain.timer(msec);
+  TurnToAngle(-25, 500);
+  CurveCircle(-90, -35, 1500);
   Grab(-100);
-  wait(500, msec);
+  DriveTo(24, 1400);
+  DriveTo(-17, 1400);
   Grab(0);
-  DriveTo(3, 1000);
-  TurnToAngle(45, 1000);
-  Grab(100);  
-  DriveTo(20, 3000);
-  DriveTo(16, 3000, 4);
-  TurnToAngle(-33, 1000);
-  FireSling();
-  thread pullsling3 = thread(PullSling);
-  DriveTo(-33, 3000);
-  TurnToAngle(0, 1000);
+  TurnToAngle(-163, 1200);
   Grab(100);
-  DriveTo(30, 5000, 4);
-  TurnToAngle(-41, 1000);
-  FireSling();
-  thread pullsling4 = thread(PullSling);
-
+  DriveTo(63, 2400);
+  Swing(-180, 1, 400);
+  TurnToAngle(-210, 800);
+  DriveTo(-30, 1800);
+  TurnToAngle(-360, 1000);
+  Grab(-100);
+  DriveTo(20, 1600);
+  DriveTo(-12, 1200);
+  Grab(0);
+  Swing(-450, -1, 1000);
+  Grab(100);
+  DriveTo(15, 1700, 6);
+  TurnToAngle(-340, 1000);
+  Grab(-100);
+  CurveCircle(-370, -100, 3000, 8);
   double end_time = Brain.timer(msec);
   Brain.Screen.newLine();
-  Brain.Screen.printAt(110, 110, "%f", end_time - begin_time);
+  Brain.Screen.printAt(80, 80, "%f", end_time - begin_time);
 }
 
-void LeftAuton8() {
-  double begin_time = Brain.timer(msec);
-  thread pullsling = thread(PullSling);
+void Far5() {
   thread headingcorrection = thread(heading_correction);
-  DriveTo(-3, 800);
-  Grab(-100);
-  wait(400, msec);
-  Grab(0);
-  DriveTo(2, 1000);
-  TurnToAngle(-14, 1000);
-  FireSling();
-  thread pullsling2 = thread(PullSling);
-  TurnToAngle(35, 1000);
-  Grab(100);
-  DriveTo(20, 2500);
-  TurnToAngle(45, 1000);
-  DriveTo(16, 2000, 5);
-  TurnToAngle(-33, 1000);
-  DriveTo(-5, 1000);
-  FireSling();
-  thread pullsling3 = thread(PullSling);
-  DriveTo(-28, 2000);
-  TurnToAngle(0, 1000);
-  Grab(100);
-  DriveTo(32, 5000, 3);
-  DriveTo(-32, 2500);
-  TurnToAngle(-33, 1000);
-  DriveTo(28, 2000);
-  FireSling();
-  thread pullsling4 = thread(PullSling);
-  DigitalOutC.set(true);
-}
-
-void RightAuton8() {
   double begin_time = Brain.timer(msec);
-  thread pullsling = thread(PullSling);
-  thread headingcorrection = thread(heading_correction);
-  Swing(191, -1, 1000);
-  DriveTo(-6, 1000);
-  Grab(-100);
-  wait(400, msec);
-  Grab(0);
-  DriveTo(3, 1000);
-  FireSling();
-  thread pullsling2 = thread(PullSling);
-  TurnToAngle(132, 1000);
   Grab(100);
-  DriveTo(57, 3000, 6);
-  DriveTo(-16, 2000);
-  TurnToAngle(214, 1000);
-  FireSling();
-  thread pullsling3 = thread(PullSling);  
-  DriveTo(-32, 3000);
-  TurnToAngle(180, 1000);
-  Grab(100);
-  DriveTo(32, 5000, 3);
-  DriveTo(-32, 2500);
-  TurnToAngle(212.5, 1000);
-  DriveTo(29, 2500);
-  FireSling();
-  thread pullsling4 = thread(PullSling);
-  DigitalOutC.set(true);
-}
-
-void RightAuton9() {
-  double begin_time = Brain.timer(msec);
-  thread pullsling = thread(PullSling);
-  thread headingcorrection = thread(heading_correction);
-  Grab(100);
-  DriveTo(20, 2000);
-  DriveTo(-2, 1000);
-  TurnToAngle(-30, 1000);
-  FireSling();
-  thread pullsling2 = thread(PullSling);
-  TurnToAngle(-59, 1000);
-  DriveTo(-18.5, 1500);
-  Grab(-100);
-  wait(250, msec);
-  Grab(0);
-  DriveTo(5.5, 1000);
-  TurnToAngle(-90, 1000);
-  Grab(100);
-  DriveTo(52, 4000, 8);
-  DriveTo(-16, 2000);
-  TurnToAngle(-16, 1000);
-  FireSling();
-  thread pullsling3 = thread(PullSling);
-  DriveTo(-34.5, 3000);
-  TurnToAngle(-45, 1000);
-  Grab(100);
-  DriveTo(34, 5000, 3);
-  TurnToAngle(0, 1000);
-  FireSling();
-  thread pullsling4 = thread(PullSling);
-}
-
-void SoloAWP11() {
-  double begin_time = Brain.timer(msec);
-  thread pullsling = thread(PullSling);
-  thread headingcorrection = thread(heading_correction);
-  
-  //pick up disc and spin the roller
-  Grab(100);
-  DriveTo(4, 1000);
-  Grab(0);
-  DriveTo(-8, 1000);
+  DriveTo(5, 1000);
+  CurveCircle(-10, 120, 1500, false);
+  CurveCircle(-80, 30, 1500, false);
+  CurveCircle(-90, 50, 1500, false);
+  CurveCircle(-85, 100, 1000);
+  TurnToAngle(90, 800);
   Grab(-100);
   wait(200, msec);
-  Grab(0);
-  DriveTo(5, 1000);
-  TurnToAngle(35, 1000);
-
-  //FireSling();
-  //thread pullsling2 = thread(PullSling);
-}
-
-void SoloAWP8() {
-  double begin_time = Brain.timer(msec);
-  thread pullsling = thread(PullSling);
-  thread headingcorrection = thread(heading_correction);
-  DriveTo(-3, 800);
-  Grab(-100);
-  wait(500, msec);
-  Grab(0);
-  DriveTo(2, 1000);
-  TurnToAngle(-13, 1000);
-  FireSling();
-  thread pullsling2 = thread(PullSling);
-  TurnToAngle(35, 1000);
+  DriveTo(18, 1200);
+  DriveTo(-20, 1200);
+  TurnToAngle(30, 800);
+  CurveCircle(35, 300, 1500, false);
   Grab(100);
-  DriveTo(20, 2500);
-  TurnToAngle(45, 1000);
-  DriveTo(15, 2000, 5);
-  TurnToAngle(-31, 1000);
-  DriveTo(-5, 1000);
-  FireSling();
-  thread pullsling3 = thread(PullSling);
-  TurnToAngle(40, 1000);
-  Grab(100);
-  DriveTo(56, 5000, 6);
-  TurnToAngle(-68.5, 1000);
-  FireSling();
-  thread pullsling4 = thread(PullSling);
-  DriveTo(5, 1000);
-  TurnToAngle(-135, 1000);
-  DriveTo(-35, 2000);
-  ChassisControl(-15, -15);
+  CurveCircle(60, 150, 1500, false);
+  Swing(0, 1, 800);
+  DriveTo(-30, 2000);
+  TurnToAngle(180, 800);
   Grab(-100);
-  wait(500, msec);
-  Grab(0);
+  wait(200, msec);
+  CurveCircle(100, 15, 2000);
+  TurnToAngle(0, 800);
+  Grab(100);
+  DriveTo(15, 1500);
+  CurveCircle(-70, 15, 1000);
+  TurnToAngle(-180, 800);
+  Grab(-100);
+  DriveTo(20, 1500);
   double end_time = Brain.timer(msec);
   Brain.Screen.newLine();
-  Brain.Screen.printAt(110, 110, "%f", end_time - begin_time);
-  DigitalOutC.set(true);
+  Brain.Screen.printAt(80, 80, "%f", end_time - begin_time);
 }
 
-void ProgSkills() {
-  double begin_time = Brain.timer(msec);
-  thread pullsling = thread(PullSling);
+void Near() {
   thread headingcorrection = thread(heading_correction);
-  DriveTo(-3, 800);
-  ChassisControl(-20, -20);
+  double begin_time = Brain.timer(msec);
+  TurnToAngle(26, 500);
+  CurveCircle(90, 22, 2000);
   Grab(-100);
-  wait(800, msec);
-  Grab(0);
-  Stop(vex::hold);
-  Swing(-90, 1, 1000);
-  Grab(100);
-  DriveTo(21, 2500);
-  Grab(0);
   DriveTo(4, 1000);
-  ChassisControl(20, 20);
+  CurveCircle(66, 25, 1000);
+  Swing(135, -1, 1000);
+  //DriveTo(-1, 500);
+  Arm(100);
+  wait(500, msec);
+  Arm(30);
+  wait(500, msec);
+  Arm(0);
+  /*
+  ChassisControl(-4, -4);
+  wait(500, msec);
+  ChassisControl(0, 0);
+  */
+  DriveTo(17, 1400);
   Grab(100);
-  wait(800, msec);
-  Grab(0);
-  Stop(vex::hold);
-  DriveTo(-4, 1000);
-  TurnToAngle(0, 1000);
-  DriveTo(50, 4000);
-  FireSling();
-  thread pullsling2 = thread(PullSling);
-  TurnToAngle(137, 1000);
-  Grab(100);
-  DriveTo(21, 2500);
-  TurnToAngle(45, 1000);
-  DriveTo(31, 4000, 7);
-  TurnToAngle(-45, 1000);
-  DriveTo(4.5, 1000);
-  FireSling();
-  thread pullsling3 = thread(PullSling);
-  TurnToAngle(0, 1000);
-  Grab(100);
-  DriveTo(38, 5000, 5);
-  TurnToAngle(-98, 1000);
-  FireSling();
-  thread pullsling4 = thread(PullSling);
-  TurnToAngle(-233, 1000);
-  Grab(100);
-  DriveTo(28, 3000);
-  DriveTo(15, 4000, 3);
-  DriveTo(-43, 3000);
-  TurnToAngle(-98, 1000);
-  FireSling();
-  thread pullsling5 = thread(PullSling);
-  TurnToAngle(-248, 1000);
-  Grab(100);
-  DriveTo(48, 3500);
-  DriveTo(15, 4000, 3);
-  DriveTo(-15, 2000);
-  TurnToAngle(-270, 1000);
-  Grab(0);
-  DriveTo(29, 2500);
-  ChassisControl(20, 20);
-  Grab(100);
-  wait(800, msec);
-  Grab(0);
-  Stop(vex::hold);
-  DriveTo(-22, 2500);
-  TurnToAngle(-360, 1000);
-  DriveTo(24, 2500);
-  ChassisControl(20, 20);
-  Grab(100);
-  wait(800, msec);
-  Grab(0);
-  Stop(vex::hold);
-  DriveTo(-3, 1000);
-  TurnToAngle(-379, 1000);
-  DriveTo(-61, 4000);
-  TurnToAngle(-540, 1000);
-  FireSling();
-  thread pullsling6 = thread(PullSling);
-  TurnToAngle(-403, 1000);
-  Grab(100);
-  DriveTo(21, 2500);
-  TurnToAngle(-495, 1000);
-  DriveTo(31, 4000, 7);
-  TurnToAngle(-585, 1000);
-  DriveTo(4.5, 1000);
-  FireSling();
-  thread pullsling7 = thread(PullSling);
-  TurnToAngle(-540, 1000);
-  Grab(100);
-  DriveTo(38, 5000, 5);
-  TurnToAngle(-638, 1000);
-  FireSling();
-  thread pullsling8 = thread(PullSling);
-  TurnToAngle(-773, 1000);
-  Grab(100);
-  DriveTo(28, 3000);
-  DriveTo(15, 4000, 3);
-  DriveTo(-43, 3000);
-  TurnToAngle(-638, 1000);
-  FireSling();
-  thread pullsling9 = thread(PullSling);
-  TurnToAngle(-630, 1000);
-  DriveTo(-56, 4000);
-  TurnToAngle(-675, 1000);
-  DigitalOutD.set(true);
+  Arm(-100);
+  CurveCircle(88, -80, 3000, 9);
+  Arm(0);
+  CurveCircle(215, -32, 3000);
+  Arm(100);
+  CurveCircle(177, -105, 3000);
+  Arm(-100);
+  Grab(-100);
   double end_time = Brain.timer(msec);
   Brain.Screen.newLine();
-  Brain.Screen.printAt(110, 110, "%f", end_time - begin_time);
+  Brain.Screen.printAt(80, 80, "%f", end_time - begin_time);
+}
+
+void NearElim() {
+  thread headingcorrection = thread(heading_correction);
+  double begin_time = Brain.timer(msec);
+  DriveTo(52, 2500);
+  TurnToAngle(-90, 1000);
+  Grab(-100);
+  DriveTo(3, 1000);
+  DriveTo(-5, 1000);
+  Swing(0, -1, 1000);
+  Grab(100);
+  DriveTo(17, 1200);
+  CurveCircle(135, -32, 3000);
+  CurveCircle(90, -85, 3000);
+  DriveTo(7, 1000);
+  Grab(-100);
+  wait(300, msec);
+  TurnToAngle(90, 400);
+  DriveTo(-41, 2000);
+  Arm(100);
+  wait(500, msec);
+  Arm(0);
+  double end_time = Brain.timer(msec);
+  Brain.Screen.newLine();
+  Brain.Screen.printAt(80, 80, "%f", end_time - begin_time);
+}
+
+void SoloAWP() {
+  thread headingcorrection = thread(heading_correction);
+  thread pull_catapult = thread(pullcatapult);
+  double begin_time = Brain.timer(msec);
+  TurnToAngle(-25, 500);
+  CurveCircle(-90, -30, 1500);
+  Grab(-100);
+  DriveTo(22, 1300);
+  DriveTo(-18, 1400);
+  TurnToAngle(-220, 1000);
+  Grab(100);
+  CurveCircle(-180, 60, 3000);
+  DriveTo(74, 3000);
+  TurnToAngle(-350, 900);
+  ChassisControl(6, 6);
+  Grab(-100);
+  //catapult_motor.stop(coast);
+  wait(300, msec);
+  DriveTo(-10, 900);
+  Swing(-405, -1, 800);
+  Arm(100);
+  wait(500, msec);
+  Arm(30);
+  wait(250, msec);
+  ChassisControl(-4, -4);
+  wait(250, msec);
+  Arm(0);
+  wait(250, msec);
+  ChassisControl(0, 0);
+  DriveTo(17, 1400);
+  Arm(-100);
+  TurnToAngle(-320, 800);
+  CurveCircle(-371, -90, 3000);
+  double end_time = Brain.timer(msec);
+  Brain.Screen.newLine();
+  Brain.Screen.printAt(80, 80, "%f", end_time - begin_time);
+}
+
+void ProgSkills(){
+  thread headingcorrection = thread(heading_correction);
+  double begin_time = Brain.timer(msec);
+  DriveTo(10, 1000);
+  Arm(100);
+  wait(500, msec);
+  Arm(0);
+  launch = true;
+  catapultlaunch(1000);
+  double end_time = Brain.timer(msec);
+  Brain.Screen.newLine();
+  Brain.Screen.printAt(80, 80, "%f", end_time - begin_time);
 }
 
 void TestPID() {
-  CurveCircle(180, -5, 2000);
+  thread pull_catapult = thread(pullcatapult);
+  CurveCircle(10, 40, 3000, false);
+  CurveCircle(120, 13, 1500, false);
+  CurveCircle(38, -80, 3000, false);
+  CurveCircle(170, 13, 3000, false);
+  CurveCircle(190, 165, 3000, false);
+  CurveCircle(300, 13, 1500, false);
+  CurveCircle(218, -80, 3000, false);
+  CurveCircle(350, 13, 3000, false);
+  CurveCircle(360, 300, 3000);
 }
