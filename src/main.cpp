@@ -1,8 +1,8 @@
 /*----------------------------------------------------------------------------*/
 /*                                                                            */
 /*    Module:       main.cpp                                                  */
-/*    Author:       Richard Wang                                              */
-/*    Created:      Thu Sep 26 2019                                           */
+/*    Author:       Richard Wang (99116X)                                        */
+/*    Created:      Feburary 15, 2023                                         */
 /*    Description:  Competition Template                                      */
 /*                                                                            */
 /*----------------------------------------------------------------------------*/
@@ -12,17 +12,18 @@
 // [Name]               [Type]        [Port(s)]
 // Controller1          controller                    
 // LimitSwitchA         limit         A               
-// catapult_motor       motor         11              
-// intake_motor         motor         8               
-// left_chassis1        motor         19              
-// left_chassis2        motor         12              
-// right_chassis1       motor         17              
-// right_chassis2       motor         16              
-// left_chassis3        motor         13              
-// right_chassis3       motor         20              
-// InertialA            inertial      18              
-// DigitalOutB          digital_out   B               
+// catapult_motor       motor         16              
+// intake_motor         motor         2               
+// left_chassis1        motor         14              
+// left_chassis2        motor         13              
+// right_chassis1       motor         18              
+// right_chassis2       motor         17              
+// left_chassis3        motor         12              
+// right_chassis3       motor         19              
+// InertialA            inertial      4               
 // DigitalOutC          digital_out   C               
+// DigitalOutD          digital_out   D               
+// DigitalOutE          digital_out   E               
 // ---- END VEXCODE CONFIGURED DEVICES ----
 
 #include "vex.h"
@@ -52,16 +53,21 @@ void pre_auton(void) {
   // Initializing Robot Configuration. DO NOT REMOVE!
   vexcodeInit();
   float point;
-  point = (InertialA.heading(degrees));
-  //Brain.Screen.print("Point : %f\n", point);
+  point = (InertialA.rotation(degrees));
+  
   // Initializing Robot Configuration
   vexcodeInit();
+  
   //calibrate inertial sensor
   InertialA.calibrate();
+
   // waits for the Inertial Sensor to calibrate
   while (InertialA.isCalibrating()) {
     wait(100, msec);
   }
+
+  double current_heading = InertialA.heading();
+  Brain.Screen.print(current_heading);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -76,10 +82,77 @@ void pre_auton(void) {
 /*---------------------------------------------------------------------------*/
 
 void autonomous(void) {
-  for (int i = 0; i < 4; i++) {
-    TurnToAngle(90, 1200);
-    wait(1000, msec);
+  double begin_time = Brain.timer(msec);
+  thread PullCatapult1 = thread(PullCatapult);
+  thread anglestabilization = thread(AngleStabilization);
+  
+  // Spin the roller.
+  Grab(-100);
+  ChassisControl(17, 17);
+  wait(200, msec);
+  Grab(0);
+  ChassisControl(0, 0);
+  
+  // Knock down the 3 disk stack.
+  DriveTo(-10.5, 0, 1100);
+  TurnSmall(56, 900);
+  DriveTo(-30, 0, 1600);
+
+  // Back up a bit, turn and shoot the first disk.
+  DriveTo(4, 0, 1100);
+  TurnMedium(-75, 1000);
+  FireCatapult();
+  
+  // Lower the catapult again, load the second disk, shoot.
+  PullCatapult();
+  Grab(70);
+  wait(800, msec);
+  FireCatapult();
+  
+  // Lower the catapult, pick the 3rd disk.
+  thread PullCatapult2 = thread(PullCatapult);
+  TurnMedium(-102, 1200);
+  while(LimitSwitchA.pressing() == 0) {
+    wait(10, msec);
   }
+  Grab(70);
+  DriveTo(8, 0, 1200);
+  TurnMedium(95, 1100);
+  FireCatapult();
+
+  // Lower the catapult, pick up the 4th disk
+  thread PullCatapult3 = thread(PullCatapult);
+  thread grabcheck1 = thread(GrabCheck);
+  TurnMedium(-95, 1100);
+  while(LimitSwitchA.pressing() == 0) {
+    wait(10, msec);
+  }
+  DriveTo(8, 0, 1100);
+  TurnMedium(90, 1000);
+  FireCatapult();
+  /*
+  DigitalOutC.set(true);
+  double end_time = Brain.timer(msec);
+  Brain.Screen.newLine();
+  Brain.Screen.printAt(80, 80, "%f", end_time - begin_time);
+  */
+  thread PullCatapult4 = thread(PullCatapult);
+  thread grabcheck2 = thread(GrabCheck);
+  TurnMedium(-90, 1000);
+  while(LimitSwitchA.pressing() == 0) {
+    wait(10, msec);
+  }
+  DriveTo(12, 0, 1000);
+  double remainder_time = Brain.timer(msec);
+  Brain.Screen.print(remainder_time);
+  TurnMedium(80, 1000);
+  FireCatapult();
+  Grab(0);
+  DigitalOutC.set(true);
+  
+  double end_time = Brain.timer(msec);
+  Brain.Screen.newLine();
+  Brain.Screen.printAt(110, 110, "%f", end_time - begin_time);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -99,7 +172,7 @@ int xi_flag = 0, xi_flag1 = 0;
 
 void usercontrol(void) {
   Brain.Screen.clearScreen();
-  
+  bool setup_catapult = true;
   // User control code here, inside the loop
   while (1) {
    //{
@@ -146,33 +219,46 @@ void usercontrol(void) {
 //=========================================================================
     
     if(BtnA) {
-      catapult_motor.spin(fwd,100*0.128,volt);
+      catapult_motor.spin(fwd, 100 * 0.128, volt);
     } else if(LimitSwitchA.pressing() == 0) {
-      catapult_motor.spin(fwd,100*0.128,volt);
+      if (setup_catapult) {
+        catapult_motor.spin(fwd, 100 * 0.128, volt);
+      } else {
+        catapult_motor.spin(directionType::rev, 1 * 0.128, volt);
+      }
     } else {
       catapult_motor.stop(hold);
     }
 
 //=========================================================================
-    if (R1 && LimitSwitchA.pressing() == 1) {
-      intake_motor.spin(fwd, 0.128 *100, voltageUnits::volt);
-    } else if(R2) {
-      intake_motor.spin(fwd, 0.128 *-100, voltageUnits::volt);
+    if (R2 && LimitSwitchA.pressing() == 1) {
+      intake_motor.spin(fwd, 0.128 * 75, voltageUnits::volt);
+    } else if(R1) {
+      intake_motor.spin(fwd, 0.128 * -100, voltageUnits::volt);
     } else { 
       intake_motor.stop(hold);
     }
    
     if (L1) {
       if (L2) {
-         DigitalOutB.set(true);
+         DigitalOutD.set(true);
+         DigitalOutE.set(true);
       }
-    } else if (L2) {
-      DigitalOutB.set(false);
-    }
- 
+    } 
+
     if (BtnY) {
+      catapult_motor.spin(fwd,100*0.128, volt);
+      wait(100, msec);
       DigitalOutC.set(true);
     } 
+
+    if (BtnX) {
+      setup_catapult = false;
+    }
+
+    if (BtnB) {
+      setup_catapult = true;
+    }
     // Sleep the task for a short amount of time to prevetning wasting 
     // too much resources.
     wait(10, msec); 

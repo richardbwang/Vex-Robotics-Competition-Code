@@ -136,9 +136,9 @@ float PID::Update(float input) {
   output = proportional + integral + derivative;
   if (fabs(current_error) < 2) {
     if (arrived) {
-      Brain.Screen.printAt(15, index * 18, "Mid: %.2f, %.2f, %.2f, %.2f, %.2f TURE", current_error, proportional, integral, derivative, output); 
+      //Brain.Screen.printAt(15, index * 18, "Mid: %.2f, %.2f, %.2f, %.2f, %.2f TURE", current_error, proportional, integral, derivative, output); 
     } else {
-      Brain.Screen.printAt(15, index * 18, "Mid: %.2f, %.2f, %.2f, %.2f, %.2f FALSE", current_error, proportional, integral, derivative, output);      
+      //Brain.Screen.printAt(15, index * 18, "Mid: %.2f, %.2f, %.2f, %.2f, %.2f FALSE", current_error, proportional, integral, derivative, output);      
     }
     index++;
   }

@@ -14,8 +14,9 @@ extern motor right_chassis2;
 extern motor left_chassis3;
 extern motor right_chassis3;
 extern inertial InertialA;
-extern digital_out DigitalOutB;
 extern digital_out DigitalOutC;
+extern digital_out DigitalOutD;
+extern digital_out DigitalOutE;
 
 /**
  * Used to initialize code/tasks/devices added using tools in VEXcode Pro.
