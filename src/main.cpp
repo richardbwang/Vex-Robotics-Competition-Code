@@ -2,7 +2,7 @@
 /*                                                                            */
 /*    Module:       main.cpp                                                  */
 /*    Author:       Richard Wang (99116X)                                        */
-/*    Created:      Feburary 15, 2023                                         */
+/*    Created:      March 9, 2023                                             */
 /*    Description:  Competition Template                                      */
 /*                                                                            */
 /*----------------------------------------------------------------------------*/
@@ -88,71 +88,58 @@ void autonomous(void) {
   
   // Spin the roller.
   Grab(-100);
-  ChassisControl(17, 17);
-  wait(200, msec);
+  ChassisControl(25, 25);
+  wait(150, msec);
   Grab(0);
   ChassisControl(0, 0);
   
   // Knock down the 3 disk stack.
-  DriveTo(-10.5, 0, 1100);
+  DriveTo(-10.5, 0, 1000);
   TurnSmall(56, 900);
   DriveTo(-30, 0, 1600);
 
   // Back up a bit, turn and shoot the first disk.
-  DriveTo(4, 0, 1100);
-  TurnMedium(-75, 1000);
+  DriveTo(5, 0, 800);
+  TurnMedium(-78, 1000);
+  DriveTo(-5, 0, 800);
   FireCatapult();
-  
-  // Lower the catapult again, load the second disk, shoot.
-  PullCatapult();
-  Grab(70);
-  wait(800, msec);
-  FireCatapult();
+  wait(100, msec);
   
   // Lower the catapult, pick the 3rd disk.
   thread PullCatapult2 = thread(PullCatapult);
-  TurnMedium(-102, 1200);
+  DriveTo(4, 0, 800);
+  TurnMedium(-98, 1000);
   while(LimitSwitchA.pressing() == 0) {
     wait(10, msec);
   }
-  Grab(70);
-  DriveTo(8, 0, 1200);
-  TurnMedium(95, 1100);
+  Grab(100);
+  DriveTo(10, 0, 1200);
+  wait(300, msec);
+  DriveTo(10, 0, 1100);
+  wait(300, msec);
+  TurnMedium(88, 1000);
+  DriveTo(-5, 0, 1100);
+  Grab(0);
   FireCatapult();
-
-  // Lower the catapult, pick up the 4th disk
-  thread PullCatapult3 = thread(PullCatapult);
-  thread grabcheck1 = thread(GrabCheck);
-  TurnMedium(-95, 1100);
-  while(LimitSwitchA.pressing() == 0) {
-    wait(10, msec);
-  }
-  DriveTo(8, 0, 1100);
-  TurnMedium(90, 1000);
-  FireCatapult();
-  /*
   DigitalOutC.set(true);
+
+  /*
+  thread PullCatapult3 = thread(PullCatapult);
+  TurnMedium(-85, 1200);
+  while(LimitSwitchA.pressing() == 0) {
+    wait(10, msec);
+  }
+  Grab(100);
+  DriveTo(12, 0, 1200);
+  TurnMedium(77, 1200);
+  DriveTo(9, 0, 1200);
+  wait(500, msec);
+  DriveTo(-10, 0, 1200);
+  FireCatapult();
+  */
   double end_time = Brain.timer(msec);
   Brain.Screen.newLine();
   Brain.Screen.printAt(80, 80, "%f", end_time - begin_time);
-  */
-  thread PullCatapult4 = thread(PullCatapult);
-  thread grabcheck2 = thread(GrabCheck);
-  TurnMedium(-90, 1000);
-  while(LimitSwitchA.pressing() == 0) {
-    wait(10, msec);
-  }
-  DriveTo(12, 0, 1000);
-  double remainder_time = Brain.timer(msec);
-  Brain.Screen.print(remainder_time);
-  TurnMedium(80, 1000);
-  FireCatapult();
-  Grab(0);
-  DigitalOutC.set(true);
-  
-  double end_time = Brain.timer(msec);
-  Brain.Screen.newLine();
-  Brain.Screen.printAt(110, 110, "%f", end_time - begin_time);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -173,7 +160,9 @@ int xi_flag = 0, xi_flag1 = 0;
 void usercontrol(void) {
   Brain.Screen.clearScreen();
   bool setup_catapult = true;
+  DigitalOutC.set(true);
   // User control code here, inside the loop
+  
   while (1) {
    //{
       //int Brain_time_111=Brain.timer(msec);
@@ -186,7 +175,6 @@ void usercontrol(void) {
     // update your motors, etc.
      // ........................................................................
      // User control code here, inside the loop
-    
 
     Ch1 = Controller1.Axis1.value();
     Ch2 = Controller1.Axis2.value();
@@ -224,7 +212,7 @@ void usercontrol(void) {
       if (setup_catapult) {
         catapult_motor.spin(fwd, 100 * 0.128, volt);
       } else {
-        catapult_motor.spin(directionType::rev, 1 * 0.128, volt);
+        catapult_motor.spin(directionType::rev, 5 * 0.128, volt);
       }
     } else {
       catapult_motor.stop(hold);
