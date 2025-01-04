@@ -27,6 +27,8 @@ class PID {
   
   // Set the stable time duration as the exit condition check.
   void SetSmallBigErrorDuration(double new_small_error_duration, double new_big_error_duration);
+
+  void SetArrive(bool arrive);
   
   // Whether arrived at the desired target within the tolerance
   // range.
@@ -48,7 +50,7 @@ class PID {
   double target;
 
   // Exit condition arrived.
-  bool arrived;
+  bool arrived, arrive;
 
   // Minimum time duration to hold a stable state so 
   // we can exit the pid loop.

@@ -30,6 +30,10 @@ T angleWrap(T);
 
 double clip(double, double, double);
 
+double to_rad(double deg);
+
+double to_deg(double rad);
+
 class Graph {
   public:
     double* dataVar;

@@ -6,6 +6,7 @@
 // Constructor
 PID::PID(double new_kp, double new_ki, double new_kd)
   : arrived(false), 
+    arrive(true), 
     small_error_tolerance(1), 
     big_error_tolerance(3), 
     small_error_duration(100), 
@@ -58,6 +59,11 @@ void PID::SetSmallBigErrorDuration(double new_small_error_duration, double new_b
   small_error_duration = new_small_error_duration;
   big_error_duration = new_big_error_duration;
 }
+
+void PID::SetArrive(bool new_arrive) {
+  arrive = new_arrive;
+}
+
 bool PID::TargetArrived() { 
   return arrived;
 }
@@ -126,7 +132,7 @@ double PID::Update(double input) {
   integral = ki * sum_error;
   
   if (fabs(current_error) <= small_error_tolerance && 
-      fabs(derivative) <= derivative_tolerance) { 
+      fabs(derivative) <= derivative_tolerance && arrive == true) { 
     // Exit when staying in tolerated region and 
     // maintaining a low enough speed for enough time
     if (Brain.timer(msec) - small_check_time >= small_error_duration) {
@@ -137,7 +143,7 @@ double PID::Update(double input) {
   }
 
   if (fabs(current_error) <= big_error_tolerance && 
-      fabs(derivative) <= derivative_tolerance) { 
+      fabs(derivative) <= derivative_tolerance && arrive == true) { 
     // Exit when staying in tolerated region and 
     // maintaining a low enough speed for enough time
     if (Brain.timer(msec) - big_check_time >= big_error_duration) {

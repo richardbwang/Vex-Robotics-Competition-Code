@@ -18,6 +18,14 @@ double clip(double n, double lower, double upper) {
   return std::max(lower, std::min(n, upper));
 }
 
+double to_rad(double deg) {
+  return (deg * M_PI / 180);
+}
+
+double to_deg(double rad) {
+  return (rad * 180 / M_PI);
+}
+
 Graph::Graph(double var, int ms, double g) {
   least = var;
   greatest = var;
