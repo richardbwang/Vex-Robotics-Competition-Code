@@ -9,20 +9,23 @@ brain  Brain;
 
 // VEXcode device constructors
 controller Controller1 = controller(primary);
-motor left_chassis1 = motor(PORT14, ratio6_1, true);
-motor left_chassis2 = motor(PORT13, ratio6_1, false);
-motor left_chassis3 = motor(PORT12, ratio6_1, true);
-motor left_chassis4 = motor(PORT11, ratio18_1, true);
-motor right_chassis1 = motor(PORT20, ratio6_1, false);
-motor right_chassis2 = motor(PORT19, ratio6_1, false);
-motor right_chassis3 = motor(PORT18, ratio18_1, false);
-motor right_chassis4 = motor(PORT17, ratio18_1, true);
-motor intake_motor = motor(PORT15, ratio6_1, true);
-inertial InertialA = inertial(PORT1);
-digital_out DigitalOutA = digital_out(Brain.ThreeWirePort.B);
-digital_out DigitalOutB = digital_out(Brain.ThreeWirePort.A);
-distance Distance13 = distance(PORT16);
-digital_out DigitalOutH = digital_out(Brain.ThreeWirePort.C);
+motor left_chassis1 = motor(PORT13, ratio6_1, true);
+motor left_chassis2 = motor(PORT14, ratio6_1, false);
+motor left_chassis3 = motor(PORT15, ratio6_1, true);
+motor right_chassis1 = motor(PORT19, ratio6_1, false);
+motor right_chassis2 = motor(PORT6, ratio6_1, true);
+motor right_chassis3 = motor(PORT18, ratio6_1, false);
+motor right_intake = motor(PORT2, ratio18_1, false);
+inertial inertial_sensor = inertial(PORT5);
+motor left_intake = motor(PORT1, ratio18_1, true);
+digital_out goal_clamp = digital_out(Brain.ThreeWirePort.A);
+digital_out PTO = digital_out(Brain.ThreeWirePort.D);
+optical optical_sensor = optical(PORT21);
+distance distance_sensor_arm = distance(PORT9);
+digital_out hang_deploy = digital_out(Brain.ThreeWirePort.F);
+digital_out filter = digital_out(Brain.ThreeWirePort.E);
+distance distance_sensor = distance(PORT17);
+digital_out Sort = digital_out(Brain.ThreeWirePort.B);
 
 // VEXcode generated functions
 // define variable for remote controller enable/disable

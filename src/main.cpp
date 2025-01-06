@@ -11,20 +11,23 @@
 // Robot Configuration:
 // [Name]               [Type]        [Port(s)]
 // Controller1          controller                    
-// left_chassis1        motor         14              
-// left_chassis2        motor         13              
-// left_chassis3        motor         12              
-// left_chassis4        motor         11              
-// right_chassis1       motor         20              
-// right_chassis2       motor         19              
+// left_chassis1        motor         13              
+// left_chassis2        motor         14              
+// left_chassis3        motor         15              
+// right_chassis1       motor         19              
+// right_chassis2       motor         6               
 // right_chassis3       motor         18              
-// right_chassis4       motor         17              
-// intake_motor         motor         15              
-// InertialA            inertial      1               
-// DigitalOutA          digital_out   B               
-// DigitalOutB          digital_out   A               
-// Distance13           distance      16              
-// DigitalOutH          digital_out   C               
+// right_intake         motor         2               
+// inertial_sensor      inertial      5               
+// left_intake          motor         1               
+// goal_clamp           digital_out   A               
+// PTO                  digital_out   D               
+// optical_sensor       optical       21              
+// distance_sensor_arm  distance      9               
+// hang_deploy          digital_out   F               
+// filter               digital_out   E               
+// distance_sensor      distance      17              
+// Sort                 digital_out   B               
 // ---- END VEXCODE CONFIGURED DEVICES ----
 
 #include "vex.h"
@@ -57,23 +60,23 @@ void pre_auton(void) {
   drawGUI();
   Brain.Screen.pressed(selectAuton);
   float point;
-  point = (InertialA.rotation(degrees));
+  point = (inertial_sensor.rotation(degrees));
   
   // Initializing Robot Configuration
   vexcodeInit();
   
   //calibrate inertial sensor
-  InertialA.calibrate();
+  inertial_sensor.calibrate();
 
   // waits for the Inertial Sensor to calibrate
-  while (InertialA.isCalibrating()) {
+  while (inertial_sensor.isCalibrating()) {
     wait(100, msec);
   }
 
-  double current_heading = InertialA.heading();
+  double current_heading = inertial_sensor.heading();
   Brain.Screen.print(current_heading);
   ResetChassis();
-  //InertialA.setRotation(-12.5, degrees);
+  //inertial_sensor.setRotation(-12.5, degrees);
   thread track_odom = thread(trackodom);
 }
 
@@ -86,40 +89,53 @@ void pre_auton(void) {
 /*                                                                           */
 /*  You must modify the code to add your own robot specific commands here.   */
 /*                                                                           */
-/*---------------------------------------------------------------------------*/
+/*-------------------------------
+--------------------------------------------*/
+
+bool isred=false;
 
 void autonomous(void) {
-  AutonSelected = 4;
+  AutonSelected = 7;
   switch(AutonSelected) {
     case 1:
-      Far6AntiDisruption();
+    // 1 red awp right
+      BlueLeft();
+      isred = false;
       break;
     case 2:
-      Far6LowAntiDisruption();
-      break;
+      // 2 red awp left
+      AwpStake(false);
+      isred=true;
+      break;  
     case 3:
-      NearAWP();
+      // 3 blue awp right
+      AwpStake(true);
+      isred=false;
       break;
     case 4:
-      Far6Safe();
-      break;
+      // 4 blue awp left
+      AwpStake(false);
+      isred=false;
+      break; 
     case 5:
-      NearElim();
+      RedElimRing(); // 5 red elim right
+      isred=true;
       break;
     case 6:
-      Far6SafeBar();
+      BlueElimRing(); // 5 blue elim left
+      isred=false;
       break;
     case 7:
-      NearElim();
+      skills();
+      isred=true;
       break;
     case 8:
-      tag();
+      test();
+      isred=true;
       break;
     case 9:
       TestDriveMotors();
-      break;
-    case 10:
-      TestPID();
+      isred = true;
       break;
   }
 }
@@ -137,14 +153,28 @@ void autonomous(void) {
 int Ch1, Ch2, Ch3, Ch4;
 bool L1, L2, R1, R2, BtnA, BtnB, BtnX, BtnY, BtnU, BtnD, BtnL, BtnR;
 bool first_time = true;
-int dipan_flag = 0, hang_flag = 0, wing_flag = 0;
-int xi_flag = 0, xi_flag1 = 0;
+int chassis_flag = 0, hang_flag = 0, wing_flag = 0;
+int intake_speed = 12;
 double temp = 0;
+bool wrong_color = false;
+int counter=0;
+
+bool detectcolor(bool isred){
+  if (isred == true){
+    return (optical_sensor.hue() < 300 and optical_sensor.hue() > 90);
+  }
+  return (optical_sensor.hue() > 340 or optical_sensor.hue() < 60);
+}
 
 void usercontrol(void) {
+  //pre_auton();
+  //wait(3000, msec);
+  skills();
+  /*
+  // friction_test();
   Stop(coast);
   headingcorrection = false;
-  Brain.Screen.clearScreen();
+  //Brain.Screen.clearScreen();
 
   // User control code here, inside the loop  
   while (true) {
@@ -184,44 +214,74 @@ void usercontrol(void) {
 //=========================================================================
     if(abs(Ch4) < 12 && abs(Ch3) > 12) {
       ChassisControl(Ch3 * 0.12 * 1.5, Ch3 * 0.12 * 1.5);
-      dipan_flag = 0;
+      chassis_flag = 0;
     } else if(abs(Ch4) >= 12 ) {
       Ch4 *= (0.5 + 0.2 * (abs(Ch3) / 100.0));
       //Ch4 *= 0.5;
       ChassisControl((Ch3 + Ch4) * 0.12 * 1, (Ch3 - Ch4) * 0.12 * 1);
-      dipan_flag = 1;
+      chassis_flag = 1;
     } else {
-      Stop(dipan_flag == 0 ? coast : brake);
+      Stop(chassis_flag == 0 ? coast : brake);
     }
-    if (R2) {
-      intake_motor.spin(fwd, 12, voltageUnits::volt);
-    } else if(R1) {
-      intake_motor.spin(fwd, -12, voltageUnits::volt);
+    if (R2 or BtnA) {
+      intake(intake_speed);
+      if (R2){
+        PTO.set(false);
+        optical_sensor.setLight(ledState::on);
+        optical_sensor.setLightPower(100);
+        if (optical_sensor.isNearObject() && detectcolor(isred)) {
+          wrong_color = true;
+         }
+        if (distance_sensor.objectDistance(distanceUnits::mm) < 50 && wrong_color) {
+          intake_stop(hold);
+          task::sleep(400);
+          wrong_color = false;
+        }
+      }else if(BtnA){
+        PTO.set(true);
+      }
+    } else if(R1 or BtnB) {
+      intake(-1 * intake_speed);
+      if (R1){
+        PTO.set(false);
+      }else if(BtnB){
+        PTO.set(true);
+      }
     } else { 
-      intake_motor.stop(hold);
+      intake_stop(hold);
+      optical_sensor.setLight(ledState::off);
     }
-
-    if(L1) {
-      DigitalOutH.set(true);
-    } else if(L2) {
-      DigitalOutH.set(false);
+    if (L2) {
+      goal_clamp.set(true);
+    } else if(L1) {
+      goal_clamp.set(false);
     }
-
-    if(BtnA) {
-      DigitalOutA.set(true);
-      wing_flag = 0;
-    } else if(wing_flag == 0) {
-      DigitalOutA.set(false);
+    if (BtnX){
+      PTO.set(false);
+      if (counter==0){
+        if (optical_sensor.isNearObject()) {
+          intake(0);
+          counter=15;
+        }else{
+          intake(12);
+        }
+      }else{
+        intake(-9);
+        counter--;
+      }
+      if (counter<0){
+        counter=0;
+      }
     }
-
-    if(BtnB) {
-      DigitalOutB.set(true);
-    } else if(wing_flag == 0) {
-      DigitalOutB.set(false);
+    if (BtnY){
+      hang_deploy.set(true);
     }
-
+    if (BtnU){
+      hang_deploy.set(false);
+    }
     wait(10, msec); 
   }
+  */
 }
 
 //

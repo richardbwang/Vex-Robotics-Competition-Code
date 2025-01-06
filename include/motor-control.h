@@ -13,9 +13,10 @@ extern double hangangletarget;
 extern double hangangletimelimit;
 extern double v;
 
-const double wheel_distance_in = (48.0 / 72.0) * 4.2 * M_PI;
+const double wheel_distance_in = (48.0 / 84.0) * 4.2 * M_PI;
 
 void ChassisControl(double left_power, double right_power);
+void intake(double inpower);
 
 double GetInertialHeading(bool normalize = false);
 double NormalizeAngle(double angle);
@@ -34,6 +35,7 @@ void pullcatapult();
 void catapultlaunch(int times, int interval_msec);
 
 void Stop(vex::brakeType type = vex::brake);
+void intake_stop(vex::brakeType type = vex::brake);
 void ResetChassis();
 double GetLeftRotationDegree();
 double GetRightRotationDegree();
@@ -42,7 +44,3 @@ void trackodom();
 void TurnToPoint(double x, double y, int d, double time_limit_msec);
 void MoveToPoint(double x, double y, int dir, double time_limit_msec, bool exit = true, double max_output = 12, bool overturn = false);
 void boomerang(double x, double y, double a, double dlead, double time_limit_msec, int dir = 1, bool exit = true, double max_output = 12, bool overturn = false);
-void hangangle();
-void ArmReleaseLeft();
-void ArmReleaseRight();
-void BarCross();
