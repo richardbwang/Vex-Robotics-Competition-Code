@@ -11,17 +11,19 @@
 // Robot Configuration:
 // [Name]               [Type]        [Port(s)]
 // Controller1          controller                    
-// intake_motor         motor         20              
-// right_chassis1       motor         3               
-// right_chassis2       motor         4               
-// left_chassis1        motor         1               
-// left_chassis2        motor         9               
-// right_chassis3       motor         5               
-// left_chassis3        motor         2               
-// InertialA            inertial      13              
-// catapult_motor       motor         18              
+// intake_motor         motor         8               
+// right_chassis1       motor         2               
+// right_chassis2       motor         6               
+// left_chassis1        motor         7               
+// left_chassis2        motor         5               
+// right_chassis3       motor         3               
+// left_chassis3        motor         4               
+// InertialA            inertial      21              
+// catapult_motor       motor         15              
 // awp_motor            motor         19              
-// Distance14           distance      14              
+// Distance13           distance      9               
+// DigitalOutA          digital_out   A               
+// DigitalOutB          digital_out   B               
 // ---- END VEXCODE CONFIGURED DEVICES ----
 
 #include "vex.h"
@@ -86,16 +88,16 @@ void pre_auton(void) {
 /*---------------------------------------------------------------------------*/
 
 void autonomous(void) {
-  AutonSelected = 10;
+  AutonSelected = 2;
   switch(AutonSelected) {
     case 1:
-      Far6LowAntiDisruption();
+      Far6TopAntiDisruption();
       break;
     case 2:
-      NearAWP();
+      Far6LowAntiDisruption();
       break;
     case 3:
-      Far6Top();
+      NearAWP();
       break;
     case 4:
       Far6SafeNoBar();
@@ -133,7 +135,7 @@ void autonomous(void) {
 
 int Ch1, Ch2, Ch3, Ch4;
 bool L1, L2, R1, R2, BtnA, BtnB, BtnX, BtnY, BtnU, BtnD, BtnL, BtnR;
-int dipan_flag = 0;
+int dipan_flag = 0, hang_flag = 0, wing_flag = 0;
 int xi_flag = 0, xi_flag1 = 0;
 
 void usercontrol(void) {
@@ -166,10 +168,18 @@ void usercontrol(void) {
   */
   /*
   awp_motor.stop(hold);
-  boomerang(25, 14, 90, 0.5, 2000, 1, false);
+  dirchangestart = false;
+  dirchangeend = false;
+  boomerang(-25, -15, 90, 0.5, 2000, -1, false);
   Grab(-100);
-  DriveTo(50, 500);
-  boomerang(15, 17, 165, 0.5, 2000, -1);
+  DriveToGoal(0, -1, 1000);
+  MoveToPoint(-18, -9, 1, 2000, false);
+  Arm(100);
+  boomerang(-15, -13, -15, 0.3, 1500, -1);
+  TurnToAngle(-15, 200);
+  Arm(0);
+  DigitalOutA.set(true);
+  Grab(0);
   catapult_motor.spin(fwd, 12, volt);
   while(true) {
     if(Controller1.ButtonX.pressing() == true) {
@@ -177,6 +187,7 @@ void usercontrol(void) {
     }
     wait(10, msec);
   }
+  DigitalOutA.set(false);
   catapult_motor.stop(coast);
   */
   Stop(coast);
@@ -244,27 +255,42 @@ void usercontrol(void) {
       intake_motor.stop(hold);
     }
 
-    if(BtnX && BtnY) {
-      Arm(100);
-  for(int i = 0; i < 100; i++) {
-    if(InertialA.pitch() < 15) {
-      ChassisControl(12, 12);
-    } else {
-      break;
+    if(BtnB) {
+      DigitalOutA.set(true);
+      wing_flag = 1;
     }
-    wait(10, msec);
-  }
-  ChassisControl(6, 0);
-  wait(200, msec);
-  ChassisControl(0, 0);
-    }
-    
 
+    if(BtnX) {
+      DigitalOutA.set(true);
+      wing_flag = 0;
+    } else if(wing_flag == 0) {
+      DigitalOutA.set(false);
+    }
+
+    if(BtnY) {
+      DigitalOutB.set(true);
+    } else {
+      DigitalOutB.set(false);
+    }
+
+    //Skills Controls
+    /*
+    if(BtnX) {
+      DigitalOutA.set(true);
+      DigitalOutB.set(true);
+    } else {
+      DigitalOutA.set(false);
+      DigitalOutB.set(false);
+    }
+    */
+    
     if (L1) {
       awp_motor.spin(fwd, -12, voltageUnits::volt);
+      hang_flag = 0;
     } else if(L2) {
       awp_motor.spin(fwd, 12, voltageUnits::volt);
-    } else { 
+      hang_flag = 1;
+    } else if(hang_flag == 0) { 
       awp_motor.stop(coast);
     }
 

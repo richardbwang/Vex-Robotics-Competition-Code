@@ -13,13 +13,13 @@ bool headingcorrection = true;
 bool spinfw = false;
 bool dirchangestart = true;
 bool dirchangeend = true;
-double min_output = 6;
-double dkp = 1, dki = 0.3, dkd = 7;
-double tkp = 0.45, tki = 0, tkd = 4;
-double ckp = 0.3, cki = 0.05, ckd = 4;
+double min_output = 8;
+double dkp = 1.5, dki = 0.1, dkd = 7;
+double tkp = 0.4, tki = 0, tkd = 4;
+double ckp = 0.8, cki = 0, ckd = 6;
 double maxslewaccelfwd = 24;
-double maxslewdecelfwd = 0.2;
-double maxslewaccelrev = 0.5;
+double maxslewdecelfwd = 24;
+double maxslewaccelrev = 24;
 double maxslewdecelrev = 24;
 double prevleftoutput = 0, prevrightoutput = 0;
 double xpos = 0, ypos = 0;
@@ -61,11 +61,11 @@ void ResetChassis() {
 }
 
 double GetLeftRotationDegree() {
-  return (left_chassis1.position(degrees) + left_chassis2.position(degrees) + left_chassis3.position(degrees)) / 3;
+  return (left_chassis1.position(degrees) + left_chassis2.position(degrees) + left_chassis3.position(degrees)) / 3.0;
 }
 
 double GetRightRotationDegree() {
-  return (right_chassis1.position(degrees) + right_chassis2.position(degrees) + right_chassis3.position(degrees)) / 3;
+  return (right_chassis1.position(degrees) + right_chassis2.position(degrees) + right_chassis3.position(degrees)) / 3.0;
 }
 
 //================================Chassis Movement=========================================//
@@ -106,13 +106,14 @@ double GetInertialHeading(bool normalize) {
   }
 }
 
-void TurnToAngle(double turn_angle, double time_limit_msec, double max_output) {
+void TurnToAngle(double turn_angle, double time_limit_msec, bool exit, double max_output) {
   Stop(vex::brakeType::coast);
   isturning = true;
   double threshold = 1;
   PID pid = PID(tkp, tki, tkd);
   
-  pid.SetTarget(NormalizeTarget(turn_angle));
+  turn_angle = NormalizeTarget(turn_angle);
+  pid.SetTarget(turn_angle);
   pid.SetIntegralMax(0);  
   pid.SetIntegralRange(3);
   
@@ -132,29 +133,79 @@ void TurnToAngle(double turn_angle, double time_limit_msec, double max_output) {
   // Start the PID loop.
   double start_time = Brain.timer(msec);
   double output;
-  double current_heading;
+  double current_heading = GetInertialHeading();
   double previous_heading = 0;
   int index = 1;
-  while (!pid.TargetArrived() && Brain.timer(msec) - start_time <= time_limit_msec) {
-    current_heading = GetInertialHeading();
-    output = pid.Update(current_heading);
-    
-    // Draw line
-    Brain.Screen.drawLine(
-        index * 3, fabs(previous_heading) * draw_amplifier, 
-        (index + 1) * 3, fabs(current_heading * draw_amplifier));
-    index++;
-    previous_heading = current_heading;
-    if(output > max_output) {
-      output = max_output;
-    } else if(output < -max_output) {
-      output = -max_output;
+  if(exit == false && correct_angle < turn_angle) {
+    while (GetInertialHeading() < turn_angle && Brain.timer(msec) - start_time <= time_limit_msec) {
+      current_heading = GetInertialHeading();
+      output = pid.Update(current_heading);
+      
+      // Draw line
+      Brain.Screen.drawLine(
+          index * 3, fabs(previous_heading) * draw_amplifier, 
+          (index + 1) * 3, fabs(current_heading * draw_amplifier));
+      index++;
+      previous_heading = current_heading;
+      if(output < min_output) {
+        output = min_output;
+      }
+      if(output > max_output) {
+        output = max_output;
+      } else if(output < -max_output) {
+        output = -max_output;
+      }
+      // End
+      ChassisControl(output, -output);
+      wait(10, msec);
     }
-    // End
-    ChassisControl(output, -output);
-    wait(10, msec);
-  }  
-  Stop(vex::hold);
+  } else if(exit == false && correct_angle > turn_angle) {
+    while (GetInertialHeading() > turn_angle && Brain.timer(msec) - start_time <= time_limit_msec) {
+      current_heading = GetInertialHeading();
+      output = pid.Update(current_heading);
+      
+      // Draw line
+      Brain.Screen.drawLine(
+          index * 3, fabs(previous_heading) * draw_amplifier, 
+          (index + 1) * 3, fabs(current_heading * draw_amplifier));
+      index++;
+      previous_heading = current_heading;
+      if(output < min_output) {
+        output = min_output;
+      }
+      if(output > max_output) {
+        output = max_output;
+      } else if(output < -max_output) {
+        output = -max_output;
+      }
+      // End
+      ChassisControl(-output, output);
+      wait(10, msec);
+    }
+  } else {
+    while (!pid.TargetArrived() && Brain.timer(msec) - start_time <= time_limit_msec) {
+      current_heading = GetInertialHeading();
+      output = pid.Update(current_heading);
+      
+      // Draw line
+      Brain.Screen.drawLine(
+          index * 3, fabs(previous_heading) * draw_amplifier, 
+          (index + 1) * 3, fabs(current_heading * draw_amplifier));
+      index++;
+      previous_heading = current_heading;
+      if(output > max_output) {
+        output = max_output;
+      } else if(output < -max_output) {
+        output = -max_output;
+      }
+      // End
+      ChassisControl(output, -output);
+      wait(10, msec);
+    }
+  }
+  if(exit) {
+    Stop(vex::hold);
+  }
   correct_angle = turn_angle;
   isturning = false;
 }
@@ -229,12 +280,6 @@ void DriveTo(double distance_in, double time_limit_msec, bool exit, double max_o
       } else if(fabs(rightoutput) < fabs(leftoutput) && rightoutput < min_output && rightoutput > 0) {
         leftoutput = leftoutput / rightoutput * min_output;
         rightoutput = min_output;
-      } else if(fabs(leftoutput) <= fabs(rightoutput) && leftoutput > -min_output && leftoutput < 0) {
-        rightoutput = rightoutput / leftoutput * -min_output;
-        leftoutput = -min_output;
-      } else if(fabs(rightoutput) < fabs(leftoutput) && rightoutput > -min_output && rightoutput < 0) {
-        leftoutput = leftoutput / rightoutput * -min_output;
-        rightoutput = -min_output;
       }
     }
 
@@ -282,6 +327,71 @@ void DriveTo(double distance_in, double time_limit_msec, bool exit, double max_o
   isturning = false;
 }
 
+void DriveToGoal(double distance_in, int dir, double time_limit_msec) {
+  double startl = GetLeftRotationDegree(), startr = GetRightRotationDegree();
+  Stop(vex::brakeType::coast);
+  isturning = true;
+  // Current robot setup, 3.25 inch wheel, 60/36 gear ratio.
+
+  PID pidh = PID(ckp, cki, ckd);
+  
+  pidh.SetTarget(NormalizeTarget(correct_angle));
+  pidh.SetIntegralMax(0);  
+  pidh.SetIntegralRange(1);
+  
+  pidh.SetSmallBigErrorTolerance(0, 0);
+  pidh.SetSmallBigErrorDuration(0, 0);
+  pidh.SetDerivativeTolerance(0);
+  pidh.SetArrive(false);
+
+  double start_time = Brain.timer(msec);
+  double leftoutput = 0, rightoutput = 0, correction_output = 0, current_distance = 0;
+
+  double current_angle = 0;
+  double max_output = 12;
+  int i = 0;
+  int atgoal = 0;
+
+  while ((atgoal < 3 && Brain.timer(msec) - start_time <= time_limit_msec) || i < 6 || current_distance < distance_in) {
+    current_distance = (fabs(((GetLeftRotationDegree() - startl) / 360.0) * wheel_distance_in) + fabs(((GetRightRotationDegree() - startr) / 360.0) * wheel_distance_in)) / 2;
+    current_angle = GetInertialHeading();
+    leftoutput = 50 * dir;
+    rightoutput = 50 * dir;
+    double avgvelocity = (fabs(left_chassis1.velocity(rpm)) + fabs(left_chassis2.velocity(rpm)) + fabs(left_chassis3.velocity(rpm))
+    + fabs(right_chassis1.velocity(rpm)) + fabs(right_chassis2.velocity(rpm)) + fabs(right_chassis3.velocity(rpm))) / 6;
+    correction_output = pidh.Update(current_angle);
+
+    if(avgvelocity < 50) {
+      atgoal++;
+    } else {
+      atgoal = 0;
+    }
+
+    leftoutput = leftoutput + correction_output;
+    rightoutput = rightoutput - correction_output;
+
+    //Max Output Check
+    if(fabs(leftoutput) >= fabs(rightoutput) && leftoutput > max_output) {
+      rightoutput = rightoutput / leftoutput * max_output;
+      leftoutput = max_output;
+    } else if(fabs(rightoutput) > fabs(leftoutput) && rightoutput > max_output) {
+      leftoutput = leftoutput / rightoutput * max_output;
+      rightoutput = max_output;
+    } else if(fabs(leftoutput) > fabs(rightoutput) && leftoutput < -max_output) {
+      rightoutput = rightoutput / leftoutput * -max_output;
+      leftoutput = -max_output;
+    } else if(fabs(rightoutput) > fabs(leftoutput) && rightoutput < -max_output) {
+      leftoutput = leftoutput / rightoutput * -max_output;
+      rightoutput = -max_output;
+    }
+    ChassisControl(leftoutput, rightoutput);
+    wait(10, msec);
+    i++;
+  }
+  Stop(vex::hold);
+  isturning = false;
+}
+
 void Grab(double power) {
   intake_motor.spin(fwd, 0.128 * power, voltageUnits::volt);
 }
@@ -301,6 +411,7 @@ void CurveCircle(double result_angle_deg, double center_radius, double time_limi
   double in_arc, out_arc;
   double real_angle = 0, current_angle = 0;
   double ratio, result_angle;
+  result_angle_deg = NormalizeAngle(result_angle_deg);
   result_angle = (result_angle_deg - correct_angle) * 3.14159265359 / 180;
   in_arc = fabs((fabs(center_radius) - (distancebetweenwheels / 2)) * result_angle);
   out_arc = fabs((fabs(center_radius) + (distancebetweenwheels / 2)) * result_angle);
@@ -390,8 +501,8 @@ void CurveCircle(double result_angle_deg, double center_radius, double time_limi
         }
       }
 
-      right_output = right_output + correction_output;
-      left_output = left_output - correction_output;
+      left_output = left_output + correction_output;
+      right_output = right_output - correction_output;
 
       //Max Output Check
       if(fabs(left_output) >= fabs(right_output) && left_output > max_output) {
@@ -408,7 +519,7 @@ void CurveCircle(double result_angle_deg, double center_radius, double time_limi
         right_output = -max_output;
       }
 
-      ChassisControl(left_output * drive_direction, right_output * drive_direction);
+      ChassisControl(left_output, right_output);
       wait(10, msec);
     }
   } else if (curve_direction == 1 && exit == true) {
@@ -438,8 +549,8 @@ void CurveCircle(double result_angle_deg, double center_radius, double time_limi
         }
       }
 
-      right_output = right_output + correction_output;
-      left_output = left_output - correction_output;
+      left_output = left_output + correction_output;
+      right_output = right_output - correction_output;
 
       //Max Output Check
       if(fabs(left_output) >= fabs(right_output) && left_output > max_output) {
@@ -456,7 +567,7 @@ void CurveCircle(double result_angle_deg, double center_radius, double time_limi
         right_output = -max_output;
       }
 
-      ChassisControl(left_output * drive_direction, right_output * drive_direction);
+      ChassisControl(left_output, right_output);
       wait(10, msec);
     }
   } else if (curve_direction == -1 && exit == false) {
@@ -486,8 +597,8 @@ void CurveCircle(double result_angle_deg, double center_radius, double time_limi
         }
       }
       
-      right_output = right_output + correction_output;
-      left_output = left_output - correction_output;
+      left_output = left_output + correction_output;
+      right_output = right_output - correction_output;
 
       //Max Output Check
       if(fabs(left_output) >= fabs(right_output) && left_output > max_output) {
@@ -504,7 +615,7 @@ void CurveCircle(double result_angle_deg, double center_radius, double time_limi
         right_output = -max_output;
       }
 
-      ChassisControl(left_output * drive_direction, right_output * drive_direction);
+      ChassisControl(left_output, right_output);
       wait(10, msec);
     }
   } else {
@@ -534,8 +645,8 @@ void CurveCircle(double result_angle_deg, double center_radius, double time_limi
         }
       }
 
-      right_output = right_output + correction_output;
-      left_output = left_output - correction_output;
+      left_output = left_output + correction_output;
+      right_output = right_output - correction_output;
 
       //Max Output Check
       if(fabs(left_output) >= fabs(right_output) && left_output > max_output) {
@@ -552,7 +663,7 @@ void CurveCircle(double result_angle_deg, double center_radius, double time_limi
         right_output = -max_output;
       }
 
-      ChassisControl(left_output * drive_direction, right_output * drive_direction);
+      ChassisControl(left_output, right_output);
       wait(10, msec);
     }
   }
@@ -570,7 +681,8 @@ void Swing(double swing_angle, double drive_direction, double time_limit_msec, b
   double threshold = 1;
   PID pid = PID(tkp, tki, tkd);
   
-  pid.SetTarget(NormalizeTarget(swing_angle));
+  swing_angle = NormalizeTarget(swing_angle);
+  pid.SetTarget(swing_angle);
   pid.SetIntegralMax(0);  
   pid.SetIntegralRange(5);
   
@@ -615,7 +727,9 @@ void Swing(double swing_angle, double drive_direction, double time_limit_msec, b
       index++;
       previous_heading = current_heading;
       // End
-
+      if(output < min_output) {
+        output = min_output;
+      }
       if(output > max_output) {
         output = max_output;
       } else if(output < -max_output) {
@@ -625,9 +739,9 @@ void Swing(double swing_angle, double drive_direction, double time_limit_msec, b
       left_chassis1.stop(hold);
       left_chassis2.stop(hold);
       left_chassis3.stop(hold);
-      right_chassis1.spin(fwd, -output * drive_direction, volt);
-      right_chassis2.spin(fwd, -output * drive_direction, volt);
-      right_chassis3.spin(fwd, -output * drive_direction, volt);
+      right_chassis1.spin(fwd, output * drive_direction, volt);
+      right_chassis2.spin(fwd, output * drive_direction, volt);
+      right_chassis3.spin(fwd, output * drive_direction, volt);
       wait(10, msec);
     }
   } else if(choice == 2 && exit == false) {
@@ -642,7 +756,9 @@ void Swing(double swing_angle, double drive_direction, double time_limit_msec, b
       index++;
       previous_heading = current_heading;
       // End
-
+      if(output < min_output) {
+        output = min_output;
+      }
       if(output > max_output) {
         output = max_output;
       } else if(output < -max_output) {
@@ -669,16 +785,18 @@ void Swing(double swing_angle, double drive_direction, double time_limit_msec, b
       index++;
       previous_heading = current_heading;
       // End
-
+      if(output < min_output) {
+        output = min_output;
+      }
       if(output > max_output) {
         output = max_output;
       } else if(output < -max_output) {
         output = -max_output;
       }
 
-      left_chassis1.spin(fwd, -output * drive_direction, volt);
-      left_chassis2.spin(fwd, -output * drive_direction, volt);
-      left_chassis3.spin(fwd, -output * drive_direction, volt);
+      left_chassis1.spin(fwd, output * drive_direction, volt);
+      left_chassis2.spin(fwd, output * drive_direction, volt);
+      left_chassis3.spin(fwd, output * drive_direction, volt);
       right_chassis1.stop(hold);
       right_chassis2.stop(hold);
       right_chassis3.stop(hold);
@@ -696,7 +814,9 @@ void Swing(double swing_angle, double drive_direction, double time_limit_msec, b
       index++;
       previous_heading = current_heading;
       // End
-
+      if(output < min_output) {
+        output = min_output;
+      }
       if(output > max_output) {
         output = max_output;
       } else if(output < -max_output) {
@@ -800,18 +920,23 @@ void heading_correction() {
 
 void trackodom() {
   ResetChassis();
-  double r = 0, dr = 0, a = 0, da = 0, dly = 0;
+  double l = 0, r = 0, dl = 0, dr = 0, a = 0, da = 0, dlyl = 0, dlyr = 0, dly = 0;
   while(true) {
     da = to_rad(GetInertialHeading()) - a;
-    dr = (GetRightRotationDegree() - r) * wheel_distance_in / 360;
+    dl = (GetLeftRotationDegree() - l) * wheel_distance_in / 360.0;
+    dr = (GetRightRotationDegree() - r) * wheel_distance_in / 360.0;
+    da = 0;
     if(da == 0) {
-      dly = dr / 2;
+      dly = (dl + dr) / 2.0;
     } else {
-      dly = 2 * sin(da / 2) * (dr / da + distancebetweenwheels / 2);
+      dlyl = 2.0 * sin(da / 2.0) * (dl / da + distancebetweenwheels / 2.0);
+      dlyr = 2.0 * sin(da / 2.0) * (dr / da + distancebetweenwheels / 2.0);
+      dly = (dlyl + dlyr) / 2.0;
     }
-    xpos += dly * sin(a + da / 2);
-    ypos += dly * cos(a + da / 2);
+    xpos += dly * sin(a + da / 2.0);
+    ypos += dly * cos(a + da / 2.0);
     a = to_rad(GetInertialHeading());
+    l = GetLeftRotationDegree();
     r = GetRightRotationDegree();
     wait(10, msec);
   }
@@ -866,7 +991,7 @@ void TurnToPoint(double x, double y, int d, double time_limit_msec) {
     wait(10, msec);
   }  
   Stop(vex::hold);
-  correct_angle = turn_angle;
+  correct_angle = GetInertialHeading();
   cx = x;
   cy = y;
   isturning = false;
@@ -899,6 +1024,8 @@ void MoveToPoint(double x, double y, int dir, double time_limit_msec, bool exit,
     }
   }
 
+  //double maxslewfwd = 0.9;
+  //double maxslewrev = 0.3;
   PID piddistance = PID(dkp, dki, dkd);
   PID pidh = PID(ckp, cki, ckd);
 
@@ -923,7 +1050,7 @@ void MoveToPoint(double x, double y, int dir, double time_limit_msec, bool exit,
   // Reset the chassis.
   double start_time = Brain.timer(msec);
   double leftoutput = 0, rightoutput = 0, correction_output = 0, prevleftoutput = 0, prevrightoutput = 0;
-  double exittolerance = 4;
+  double exittolerance = 1;
   bool pline = false, prevpline = true;
 
   double current_angle = 0, ot = 0;
@@ -941,7 +1068,7 @@ void MoveToPoint(double x, double y, int dir, double time_limit_msec, bool exit,
     }
     prevpline = pline;
 
-    if(hypot(x - xpos, y - ypos) > 3 && ch == true) {
+    if(hypot(x - xpos, y - ypos) > 8 && ch == true) {
       correction_output = pidh.Update(current_angle);
     } else {
       correction_output = 0;
@@ -1016,6 +1143,7 @@ void MoveToPoint(double x, double y, int dir, double time_limit_msec, bool exit,
     prevrightoutput = 0;
     Stop(vex::hold);
   }
+  correct_angle = GetInertialHeading();
   isturning = false;
 }
 
@@ -1073,7 +1201,6 @@ void boomerang(double x, double y, double a, double dlead, double time_limit_mse
   bool pline = false, prevpline = true;
 
   double current_angle = 0, h = 0, cax = 0, cay = 0;
-  bool ch = true;
 
   while ((!piddistance.TargetArrived()) && Brain.timer(msec) - start_time <= time_limit_msec) {
     h = hypot(xpos - x, ypos - y);
@@ -1106,13 +1233,15 @@ void boomerang(double x, double y, double a, double dlead, double time_limit_mse
       }
     }
 
-    if(hypot(cax - xpos, cay - ypos) > 3 && ch == true) {
+    if(hypot(cax - xpos, cay - ypos) > 8) {
       pidh.SetTarget(NormalizeTarget(to_deg(atan2(cax - xpos, cay - ypos)) + add));
+      correction_output = pidh.Update(current_angle);
+    } else if(hypot(x - xpos, y - ypos) > 6) {
+      pidh.SetTarget(NormalizeTarget(to_deg(atan2(x - xpos, y - ypos)) + add));
       correction_output = pidh.Update(current_angle);
     } else {
       pidh.SetTarget(NormalizeTarget(a));
       correction_output = pidh.Update(current_angle);
-      ch = false;
     }
 
     ts = sqrt(cp * getRadius(xpos, ypos, cax, cay, current_angle) * 9.8);
@@ -1260,4 +1389,13 @@ void fwpid(double rpm) {
     intake_motor.spin(fwd, output + ff, voltageUnits::volt);
     wait(10, msec);
   }
+}
+
+void ArmRelease() {
+  wait(100, msec);
+  Arm(5);
+  wait(400, msec);
+  Arm(-100);
+  wait(300, msec);
+  Arm(0);
 }

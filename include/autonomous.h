@@ -7,6 +7,7 @@ void selectAuton();
 void Far2Bar();
 void Far4Bar();
 void Far3();
+void Far6TopAntiDisruption();
 void Far6LowAntiDisruption();
 void Far6Low();
 void Far6Top();

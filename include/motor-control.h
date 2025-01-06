@@ -13,7 +13,7 @@ extern double hangangletarget;
 extern double hangangletimelimit;
 extern double v;
 
-const double wheel_distance_in = (48.0 / 84.0) * 4 * M_PI;
+const double wheel_distance_in = (48.0 / 84.0) * 4.2 * M_PI;
 
 void DriveControl(double left_power, double right_power);
 void ChassisControl(double left_power, double right_power);
@@ -22,8 +22,9 @@ double GetInertialHeading(bool normalize = false);
 double NormalizeAngle(double angle);
 double NormalizeTarget(double angle);
 
-void TurnToAngle(double turn_angle, double time_limit_msec, double max_output = 12);
+void TurnToAngle(double turn_angle, double time_limit_msec, bool exit = true, double max_output = 12);
 void DriveTo(double distance_in, double time_limit_msec, bool exit = true, double max_output = 12);
+void DriveToGoal(double distance_in, int dir, double time_limit_msec);
 void CurveCircle(double result_angle_deg, double center_radius, double time_limit_msec, bool exit = true, double max_output = 12);
 void Swing(double swing_angle, double drive_direction, double time_limit_msec, bool exit = true, double max_output = 12);
 void Grab(double power);
@@ -41,3 +42,4 @@ void TurnToPoint(double x, double y, int d, double time_limit_msec);
 void MoveToPoint(double x, double y, int dir, double time_limit_msec, bool exit = true, double max_output = 12, bool overturn = false);
 void boomerang(double x, double y, double a, double dlead, double time_limit_msec, int dir = 1, bool exit = true, double max_output = 12, bool overturn = false);
 void hangangle();
+void ArmRelease();

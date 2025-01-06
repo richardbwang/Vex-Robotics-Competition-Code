@@ -14,7 +14,9 @@ extern motor left_chassis3;
 extern inertial InertialA;
 extern motor catapult_motor;
 extern motor awp_motor;
-extern distance Distance14;
+extern distance Distance13;
+extern digital_out DigitalOutA;
+extern digital_out DigitalOutB;
 
 /**
  * Used to initialize code/tasks/devices added using tools in VEXcode Pro.
