@@ -4,6 +4,7 @@ extern int AutonMax;
 
 void drawGUI();
 void selectAuton();
+void Far6AntiDisruption();
 void Far6TopAntiDisruption();
 void Far6LowAntiDisruption();
 void Far6Low();

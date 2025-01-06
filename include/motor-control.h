@@ -15,7 +15,6 @@ extern double v;
 
 const double wheel_distance_in = (48.0 / 72.0) * 4.2 * M_PI;
 
-void DriveControl(double left_power, double right_power);
 void ChassisControl(double left_power, double right_power);
 
 double GetInertialHeading(bool normalize = false);
@@ -24,6 +23,8 @@ double NormalizeTarget(double angle);
 
 void TurnToAngle(double turn_angle, double time_limit_msec, bool exit = true, double max_output = 12);
 void DriveTo(double distance_in, double time_limit_msec, bool exit = true, double max_output = 12);
+void DriveToRush(double distance_in, double time_limit_msec, bool exit = true, double max_output = 12);
+void DriveToPitch(double speed, double pitch, double time_limit_msec);
 void DriveToGoal(double distance_in, int dir, double time_limit_msec);
 void CurveCircle(double result_angle_deg, double center_radius, double time_limit_msec, bool exit = true, double max_output = 12);
 void Swing(double swing_angle, double drive_direction, double time_limit_msec, bool exit = true, double max_output = 12);

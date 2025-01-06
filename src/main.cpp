@@ -11,20 +11,20 @@
 // Robot Configuration:
 // [Name]               [Type]        [Port(s)]
 // Controller1          controller                    
-// intake_motor         motor         18              
-// right_chassis1       motor         19              
-// right_chassis2       motor         14              
-// left_chassis1        motor         2               
-// left_chassis2        motor         1               
-// right_chassis3       motor         16              
-// left_chassis3        motor         3               
-// InertialA            inertial      15              
-// catapult_motor       motor         6               
-// hang_motor           motor         5               
-// Distance13           distance      17              
-// DigitalOutF          digital_out   B               
-// DigitalOutA          digital_out   A               
-// DigitalOutB          digital_out   C               
+// left_chassis1        motor         14              
+// left_chassis2        motor         13              
+// left_chassis3        motor         12              
+// left_chassis4        motor         11              
+// right_chassis1       motor         20              
+// right_chassis2       motor         19              
+// right_chassis3       motor         18              
+// right_chassis4       motor         17              
+// intake_motor         motor         15              
+// InertialA            inertial      1               
+// DigitalOutA          digital_out   B               
+// DigitalOutB          digital_out   A               
+// Distance13           distance      16              
+// DigitalOutH          digital_out   C               
 // ---- END VEXCODE CONFIGURED DEVICES ----
 
 #include "vex.h"
@@ -73,9 +73,8 @@ void pre_auton(void) {
   double current_heading = InertialA.heading();
   Brain.Screen.print(current_heading);
   ResetChassis();
+  //InertialA.setRotation(-12.5, degrees);
   thread track_odom = thread(trackodom);
-  catapult_motor.setPosition(0, degrees);
-  hang_motor.setPosition(0, degrees);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -90,10 +89,10 @@ void pre_auton(void) {
 /*---------------------------------------------------------------------------*/
 
 void autonomous(void) {
-  AutonSelected = 2;
+  AutonSelected = 4;
   switch(AutonSelected) {
     case 1:
-      Far6TopAntiDisruption();
+      Far6AntiDisruption();
       break;
     case 2:
       Far6LowAntiDisruption();
@@ -105,7 +104,7 @@ void autonomous(void) {
       Far6Safe();
       break;
     case 5:
-      ProgSkills();
+      NearElim();
       break;
     case 6:
       Far6SafeBar();
@@ -140,60 +139,12 @@ bool L1, L2, R1, R2, BtnA, BtnB, BtnX, BtnY, BtnU, BtnD, BtnL, BtnR;
 bool first_time = true;
 int dipan_flag = 0, hang_flag = 0, wing_flag = 0;
 int xi_flag = 0, xi_flag1 = 0;
+double temp = 0;
 
 void usercontrol(void) {
-  /*
-  // Initializing Robot Configuration. DO NOT REMOVE!
-  vexcodeInit();
-  drawGUI();
-  Brain.Screen.pressed(selectAuton);
-  float point;
-  point = (InertialA.rotation(degrees));
-  
-  // Initializing Robot Configuration
-  vexcodeInit();
-  
-  //calibrate inertial sensor
-  InertialA.calibrate();
-
-  // waits for the Inertial Sensor to calibrate
-  while (InertialA.isCalibrating()) {
-    wait(100, msec);
-  }
-
-  double current_heading = InertialA.heading();
-  Brain.Screen.print(current_heading);
-  ResetChassis();
-  thread track_odom = thread(trackodom);
-  catapult_motor.setPosition(0, degrees);
-  wait(3000, msec);
-  */
-  //ProgSkills();
-  /*
-  dirchangestart = false;
-  dirchangeend = false;
-  boomerang(15, 15, 90, 0.4, 1500, 1, false);
-  Grab(-100);
-  DriveToGoal(0, 1, 1000);
-  xpos = 0;
-  ypos = 0;
-  boomerang(-18, 0, 155, 0.4, 2000, -1, false);
-  TurnToAngle(155, 200);
-  DigitalOutA.set(true);
-  catapult_motor.spin(fwd, 12, volt);
-  while(true) {
-    if(Controller1.ButtonA.pressing() == true) {
-      break;
-    }
-    wait(10, msec);
-  }
-  DigitalOutA.set(false);
-  */
-  catapult_motor.stop(coast);
   Stop(coast);
   headingcorrection = false;
   Brain.Screen.clearScreen();
-  DigitalOutF.set(true);
 
   // User control code here, inside the loop  
   while (true) {
@@ -232,21 +183,15 @@ void usercontrol(void) {
 
 //=========================================================================
     if(abs(Ch4) < 12 && abs(Ch3) > 12) {
-      DriveControl(Ch3 * 1.5, Ch3 * 1.5);
+      ChassisControl(Ch3 * 0.12 * 1.5, Ch3 * 0.12 * 1.5);
       dipan_flag = 0;
     } else if(abs(Ch4) >= 12 ) {
-      DriveControl((Ch3 + Ch4) * 0.8, (Ch3 - Ch4) * 0.8);
+      Ch4 *= (0.5 + 0.2 * (abs(Ch3) / 100.0));
+      //Ch4 *= 0.5;
+      ChassisControl((Ch3 + Ch4) * 0.12 * 1, (Ch3 - Ch4) * 0.12 * 1);
       dipan_flag = 1;
     } else {
       Stop(dipan_flag == 0 ? coast : brake);
-    }
-//=========================================================================
-
-//=========================================================================
-    if(BtnX) {
-      catapult_motor.spin(fwd, 12, volt);
-    } else {
-      catapult_motor.stop(coast);
     }
     if (R2) {
       intake_motor.spin(fwd, 12, voltageUnits::volt);
@@ -256,10 +201,10 @@ void usercontrol(void) {
       intake_motor.stop(hold);
     }
 
-    if(BtnY) {
-      DigitalOutA.set(true);
-      DigitalOutB.set(true);
-      wing_flag = 1;
+    if(L1) {
+      DigitalOutH.set(true);
+    } else if(L2) {
+      DigitalOutH.set(false);
     }
 
     if(BtnA) {
@@ -273,27 +218,6 @@ void usercontrol(void) {
       DigitalOutB.set(true);
     } else if(wing_flag == 0) {
       DigitalOutB.set(false);
-    }
-    
-    if (L1) {
-      first_time = false;
-      DigitalOutF.set(true);
-      if(hang_flag >= 10) {
-        hang_motor.spin(fwd, -12, voltageUnits::volt);
-      } else {
-        hang_motor.spin(fwd, 12, voltageUnits::volt);
-        hang_flag++;
-      }
-    } else if(L2) {
-      first_time = false;
-      DigitalOutF.set(true);
-      hang_motor.spin(fwd, 12, voltageUnits::volt);
-    } else { 
-      hang_flag = 0;
-      hang_motor.stop(hold);
-      if(first_time == false) {
-        DigitalOutF.set(false);
-      }
     }
 
     wait(10, msec); 
