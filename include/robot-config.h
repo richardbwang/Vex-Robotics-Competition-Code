@@ -13,8 +13,9 @@ extern motor right_chassis3;
 extern motor left_chassis3;
 extern inertial InertialA;
 extern motor catapult_motor;
-extern motor awp_motor;
+extern motor hang_motor;
 extern distance Distance13;
+extern digital_out DigitalOutF;
 extern digital_out DigitalOutA;
 extern digital_out DigitalOutB;
 

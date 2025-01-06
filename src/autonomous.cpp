@@ -102,100 +102,8 @@ void selectAuton() {
   Brain.Screen.setFillColor(black);
 }
 
-void Far2Bar() {
-  thread headingcorrection = thread(heading_correction);
-  double begin_time = Brain.timer(msec);
-  TurnToAngle(-25, 500);
-  CurveCircle(-90, -35, 1500);
-  Grab(-100);
-  DriveTo(24, 1400);
-  DriveTo(-17, 1400);
-  Grab(0);
-  TurnToAngle(-163, 1000);
-  Grab(100);
-  DriveTo(62, 2400);
-  Swing(-180, 1, 400);
-  TurnToAngle(-218, 800);
-  DriveTo(-27, 1500);
-  TurnToAngle(-360, 900);
-  Grab(-100);
-  wait(300, msec);
-  DriveTo(27, 1400);
-  DriveTo(-10, 1200);
-  TurnToAngle(-405, 800);
-  DriveTo(-45, 2000);
-  Arm(100);
-  double end_time = Brain.timer(msec);
-  Brain.Screen.newLine();
-  Brain.Screen.printAt(80, 80, "%f", end_time - begin_time);
-}
-
-void Far3() {
-  thread headingcorrection = thread(heading_correction);
-  double begin_time = Brain.timer(msec);
-  TurnToAngle(-25, 500);
-  CurveCircle(-90, -35, 1500);
-  Grab(-100);
-  DriveTo(24, 1400);
-  DriveTo(-17, 1400);
-  Grab(0);
-  TurnToAngle(-163, 1200);
-  Grab(100);
-  DriveTo(63, 2400);
-  Swing(-180, 1, 400);
-  TurnToAngle(-210, 800);
-  DriveTo(-30, 1800);
-  TurnToAngle(-360, 1000);
-  Grab(-100);
-  DriveTo(20, 1600);
-  DriveTo(-12, 1200);
-  Grab(0);
-  Swing(-450, -1, 1000);
-  Grab(100);
-  DriveTo(15, 1700, 6);
-  TurnToAngle(-340, 1000);
-  Grab(-100);
-  CurveCircle(-370, -100, 3000, 8);
-  double end_time = Brain.timer(msec);
-  Brain.Screen.newLine();
-  Brain.Screen.printAt(80, 80, "%f", end_time - begin_time);
-}
-
-void Far4Bar() {
-    thread headingcorrection = thread(heading_correction);
-  double begin_time = Brain.timer(msec);
-  Grab(100);
-  DriveTo(7, 1000);
-  CurveCircle(-10, 130, 1500, false);
-  CurveCircle(-80, 28, 1500, false);
-  CurveCircle(-90, 50, 1500, false);
-  CurveCircle(-85, 100, 1000);
-  TurnToAngle(90, 800);
-  Grab(-100);
-  wait(200, msec);
-  DriveTo(20, 1000);
-  DriveTo(-20, 1000);
-  TurnToAngle(30, 800);
-  CurveCircle(35, 300, 1500, false);
-  Grab(100);
-  CurveCircle(53, 100, 1500, false);
-  Swing(0, 1, 1000);
-  DriveTo(-30, 1800);
-  TurnToAngle(-180, 800);
-  Grab(-100);
-  wait(300, msec);
-  DriveTo(15, 1000);
-  Swing(-230, -1, 800);
-  Arm(20);
-  DriveTo(-54, 2000);
-  Arm(100);
-  double end_time = Brain.timer(msec);
-  Brain.Screen.newLine();
-  Brain.Screen.printAt(80, 80, "%f", end_time - begin_time);
-}
-
 void Far6TopAntiDisruption() {
-  thread armrelease = thread(ArmRelease);
+  //thread //Armrelease = thread(//ArmRelease);
   Grab(100);
   dirchangestart = false;
   dirchangeend = true;
@@ -299,121 +207,114 @@ void Far6TopAntiDisruption() {
 }
 
 void Far6LowAntiDisruption() {
-  thread armrelease = thread(ArmRelease);
+  thread armrelease = thread(ArmReleaseRight);
   Grab(100);
   dirchangestart = false;
   dirchangeend = true;
-  MoveToPoint(-7, 48, 1, 2000, false);
+  MoveToPoint(-8, 51, 1, 2000, false);
   dirchangestart = true;
   dirchangeend = false;
-  MoveToPoint(3, 11, -1, 2000, false);
+  MoveToPoint(3, 12, -1, 2000, false);
+  TurnToAngle(20, 500, false);
+  Stop(hold);
   Grab(-100);
-  TurnToAngle(45, 500, false);
-  Grab(100);
-  boomerang(-35, 6, -90, 0, 2000, 1, false);
-  DigitalOutA.set(true);
-  dirchangestart = true;
-  dirchangeend = false;
-  MoveToPoint(11, 6, -1, 1500, false);
+  wait(250, msec);
   dirchangestart = false;
   dirchangeend = false;
+  Grab(100);
+  boomerang(-37, 3, -90, 0, 2000, 1);
+  MoveToPoint(5, 4, -1, 2000, false);
+  DigitalOutA.set(true);
   DigitalOutB.set(true);
-  Swing(-160, -1, 800, false, 6);
+  correct_angle = NormalizeAngle(-160);
+  dirchangeend = true;
+  DriveTo(-24, 2500, false);
+  /*
+  dirchangeend = false;
+  correct_angle = NormalizeAngle(-135);
+  DriveTo(6, 800);
   DigitalOutB.set(false);
-  while(InertialA.rotation() < NormalizeTarget(-140)) {
-    ChassisControl(12, 0);
-  }
-  correct_angle = NormalizeTarget(-150);
-  ChassisControl(-12, -12);
-  wait(150, msec);
-  DriveToGoal(0, -1, 800);
-  ChassisControl(12, 4);
+  correct_angle = NormalizeTarget(-130);
+  */
+  Stop(hold);
+  ChassisControl(8, 2);
+  wait(300, msec);
+  DigitalOutB.set(false);
+  correct_angle = NormalizeTarget(-170);
+  ChassisControl(-6, -6);
   wait(200, msec);
+  DriveToGoal(0, -1, 1200);
+  ChassisControl(12, 2);
+  wait(400, msec);
   DigitalOutA.set(false);
   xpos = 0;
   ypos = 0;
-  while(InertialA.rotation() > -220) {
-    ChassisControl(-10, 12);
+  while(InertialA.rotation() > -230) {
+    ChassisControl(-8, 12);
     wait(10, msec);
   }
   xpos = 0;
   ypos = 0;
   correct_angle = NormalizeTarget(30);
-  Grab(-100);
+  Grab(0);
   DriveTo(100, 1200);
   ChassisControl(0, 0);
   xpos = 0;
   ypos = 0;
   dirchangestart = false;
   dirchangeend = false;
-  ChassisControl(-12, -12);
-  wait(200, msec);
   MoveToPoint(-7, -13, -1, 1500, false);
-  TurnToPoint(-44, 22, 1, 200);
+  TurnToPoint(-51, 4, 1, 200);
   Grab(100);
   dirchangestart = false;
+  dirchangeend = true;
+  boomerang(-51, 4, -90, 0.5, 2000, 1, false);
   dirchangeend = false;
-  boomerang(-44, 18, -90, 0.2, 1500, 1, false);
-  TurnToAngle(-30, 600, false);
-  dirchangestart = false;
-  dirchangeend = false;
-  boomerang(-20, 20, 90, 0.5, 1500, 1, false);
-  Grab(0);
-  DriveToGoal(0, 1, 1000);
-  xpos = 0;
-  ypos = 0;
-  ChassisControl(-12, -12);
-  wait(200, msec);
-  Grab(100);
-  boomerang(-31, 20, -90, 0.3, 1500, 1, false);
-  Swing(-10, -1, 800, false);
-  TurnToAngle(70, 800, false);
-  correct_angle = NormalizeTarget(100);
-  DriveToGoal(0, 1, 1100);
-  xpos = 0;
-  ypos = 0;
-  ChassisControl(-12, -6);
-  wait(500, msec);
-  DigitalOutB.set(true);
-  MoveToPoint(-60, -50, -1, 1500, false);
-  /*
-  dirchangestart = true;
-  dirchangeend = false;
-  MoveToPoint(5, 16, -1, 1500, false);
-  TurnToAngle(180, 800, false);
-  TurnToAngle(90, 800, false);
-  DigitalOutA.set(true);
-  TurnToAngle(-15, 800, false, 3);
-  while(InertialA.rotation() < NormalizeTarget(60)) {
-    ChassisControl(6, -12);
+  DriveTo(-3, 800, false);
+  while(InertialA.rotation() < NormalizeTarget(-20)) {
+    ChassisControl(12, -12);
   }
-  correct_angle = NormalizeTarget(70);
-  DigitalOutA.set(false);
-  Grab(0);
   dirchangestart = false;
   dirchangeend = false;
-  DriveTo(6, 1000, false);
-  Grab(-100);
-  Swing(25, 1, 800, false);
-  DriveToGoal(5, 1, 1000);
-  dirchangestart = false;
-  dirchangeend = false;
+  Swing(45, 1, 800, false);
+  //boomerang(-28, 8, 90, 0, 1000, 1, false);
+  Grab(100);
+  correct_angle = NormalizeTarget(80);
+  DriveToGoal(0, 1, 1600);
   xpos = 0;
   ypos = 0;
-  */
+  correct_angle = NormalizeTarget(45);
+  ChassisControl(-12, -8);
+  wait(300, msec);
+  Grab(100);
+  dirchangeend = true;
+  boomerang(-33, 10, -90, 0.4, 2000, 1, false);
+  dirchangeend = false;
+  correct_angle = NormalizeTarget(-90);
+  Swing(-30, -1, 800, false);
+  //MoveToPoint(-30, 5, -1, 2000, false);
+  TurnToAngle(20, 400, false);
+  correct_angle = NormalizeTarget(85);
+  DriveTo(6, 700, false);
+  Grab(-100);
+  DriveToGoal(0, 1, 1800);
+  xpos = 0;
+  ypos = 0;
+  MoveToPoint(-60, -70, -1, 1500, false);
+  ChassisControl(-4, 4);
 }
 
 void Far6Low() {
-  Arm(100);
+  //Arm(100);
   Grab(100);
   ChassisControl(6, 12);
   wait(200, msec);
   MoveToPoint(-11, 47, 1, 2000, false);
-  Arm(-100);
+  //Arm(-100);
   Stop(hold);
   wait(200, msec);
   TurnToAngle(95, 600);
-  awp_motor.stop(hold);
+  //awp_motor.stop(hold);
   Grab(-100);
   wait(200, msec);
   Grab(100);
@@ -451,12 +352,12 @@ void Far6Low() {
   TurnToAngle(90, 600);
   Grab(0);
   CurveCircle(45, -28, 1500, 6);
-  Arm(100);
+  //Arm(100);
   wait(200, msec);
   Swing(-10, 1, 600, false);
   Swing(50, -1, 600, false);
-  Arm(-100);
-  awp_motor.spin(fwd, -12, voltageUnits::volt);
+  //Arm(-100);
+  //awp_motor.spin(fwd, -12, voltageUnits::volt);
   ChassisControl(12, 12);
   wait(200, msec);
   Swing(30, 1, 500, false);
@@ -466,10 +367,10 @@ void Far6Low() {
 }
 
 void Far6Top() {
-  Arm(-100);
+  //Arm(-100);
   Grab(100);
   MoveToPoint(-30, 48, 1, 2000);
-  awp_motor.stop(hold);
+  //awp_motor.stop(hold);
   Stop(hold);
   TurnToPoint(16, 48, 1, 500);
   MoveToPoint(16, 48, 1, 1100);
@@ -499,12 +400,12 @@ void Far6Top() {
   TurnToAngle(450, 700);
   Grab(0);
   CurveCircle(405, -30, 1500);
-  Arm(100);
+  //Arm(100);
   wait(200, msec);
   Swing(360, 1, 800, false);
   Swing(430, -1, 350, false);
-  Arm(-100);
-  awp_motor.spin(fwd, -12, voltageUnits::volt);
+  //Arm(-100);
+  //awp_motor.spin(fwd, -12, voltageUnits::volt);
   ChassisControl(12, 12);
   wait(150, msec);
   ChassisControl(0, 12);
@@ -523,6 +424,76 @@ void Far6Top() {
 
 void Far6Safe() {
   dirchangestart = false;
+  dirchangeend = true;
+  Grab(100);
+  DriveTo(7, 1000, false);
+  dirchangeend = false;
+  DriveTo(-10, 1200, false);
+  DigitalOutA.set(true);
+  MoveToPoint(2, -28, -1, 2000, false, 9);
+  DigitalOutB.set(true);
+  correct_angle = NormalizeTarget(-55);
+  dirchangeend = true;
+  DriveTo(-18, 2000, false);
+  DigitalOutB.set(false);
+  dirchangeend = false;
+  correct_angle = NormalizeTarget(-30);
+  DriveTo(4, 1000, false);
+  DriveTo(-7, 800, false);
+  correct_angle = NormalizeTarget(-80);
+  DriveToGoal(0, -1, 1000);
+  DriveTo(12, 1500, false);
+  DriveTo(-3, 800, false);
+  DriveToGoal(0, -1, 1000);
+  xpos = 0;
+  ypos = 0;
+  correct_angle = NormalizeTarget(-70);
+  DriveTo(5, 1000, false);
+  DigitalOutA.set(false);
+  TurnToAngle(-140, 800, false);
+  Grab(100);
+  correct_angle = NormalizeTarget(100);
+  DriveToGoal(0, 1, 1500);
+  xpos = 0;
+  ypos = 0;
+  MoveToPoint(-10, 6, -1, 1500, false);
+  Grab(100);
+  boomerang(6, 50, 0, 0.3, 1500, 1, false);
+  DriveTo(-2, 800, false);
+  TurnToAngle(70, 800, false);
+  boomerang(13, 34, 170, 0.5, 2000, 1, false);
+  Grab(-100);
+  DriveToGoal(0, 1, 1500);
+  xpos = 0;
+  ypos = 0;
+  MoveToPoint(-10, 15, -1, 1000, false);
+  TurnToAngle(100, 800, false);
+  Grab(100);
+  MoveToPoint(3, 26, 1, 2000, false);
+  if(InertialA.rotation() > NormalizeTarget(20)) {
+    Swing(20, 1, 800, false);
+  }
+  DigitalOutB.set(true);
+  TurnToAngle(5, 300);
+  correct_angle = NormalizeTarget(5);
+  DriveToGoal(0, -1, 2000);
+  DigitalOutB.set(false);
+  correct_angle = NormalizeTarget(-10);
+  DriveTo(7, 800, false);
+  TurnToAngle(-100, 800, false);
+  correct_angle = NormalizeTarget(180);
+  DriveToGoal(0, 1, 1000);
+  /*
+  MoveToPoint(2, 20, -1, 1000, false);
+  TurnToAngle(120, 800, false);
+  correct_angle = NormalizeTarget(180);
+  DriveToGoal(0, 1, 1500);
+  */
+  DriveTo(-15, 2000);
+}
+
+void Far5Safe() {
+  dirchangestart = false;
   dirchangeend = false;
   MoveToPoint(-8, 18, 1, 2000, false, 12, true);
   correct_angle = -90;
@@ -531,16 +502,16 @@ void Far6Safe() {
   MoveToPoint(-8, 15, -1, 1500);
   Swing(-40, -1, 300);
   Grab(0);
-  Arm(100);
+  //Arm(100);
   wait(200, msec);
   Swing(-90, 1, 1000, false);
   TurnToPoint(-10, -6, 1, 400);
-  Arm(-100);
+  //Arm(-100);
   MoveToPoint(-10, -6, 1, 1500, false);
   Grab(100);
   dirchangeend = true;
   boomerang(-6, -29, -180, 0.5, 2000, 1, false, 12);
-  awp_motor.stop(hold);
+  //awp_motor.stop(hold);
   dirchangestart = true;
   MoveToPoint(-8, 10, -1, 2000, false);
   TurnToPoint(-10, 20, 1, 600);
@@ -607,9 +578,9 @@ void FarAWPInside() {
   Swing(0, -1, 800, false);
   CurveCircle(30, -32, 2000, false);
   CurveCircle(-63, 18, 2000);
-  Arm(-100);
+  //Arm(-100);
   wait(300, msec);
-  Arm(0);
+  //Arm(0);
 }
 
 void FarAWPOutside() {
@@ -620,119 +591,41 @@ void FarAWPOutside() {
   Swing(-60, -1, 800, false);
   CurveCircle(0, -30, 2000, false);
   MoveToPoint(-10, -24, -1, 2000);
-  Arm(-100);
+  //Arm(-100);
   wait(300, msec);
-  Arm(0);
+  //Arm(0);
 }
-
-void Far5() {
-  thread headingcorrection = thread(heading_correction);
-  double begin_time = Brain.timer(msec);
-  Grab(100);
-  DriveTo(7, 1000);
-  CurveCircle(-10, 130, 1500, false);
-  CurveCircle(-80, 30, 1500, false);
-  CurveCircle(-90, 50, 1500, false);
-  CurveCircle(-85, 100, 1000);
-  TurnToAngle(90, 800);
-  Grab(-100);
-  wait(200, msec);
-  DriveTo(20, 1000);
-  DriveTo(-20, 1000);
-  TurnToAngle(30, 800);
-  CurveCircle(35, 300, 1500, false);
-  Grab(100);
-  CurveCircle(53, 100, 1500, false);
-  Swing(0, 1, 800);
-  DriveTo(-30, 1800);
-  TurnToAngle(-180, 800);
-  Grab(-100);
-  Swing(-375, -1, 1000);
-  Grab(100);
-  CurveCircle(-355, 60, 1500);
-  Swing(-560, -1, 1000);
-  Grab(-100);
-  CurveCircle(-530, 60, 1000);
-  double end_time = Brain.timer(msec);
-  Brain.Screen.newLine();
-  Brain.Screen.printAt(80, 80, "%f", end_time - begin_time);
-}
-
-void Near() {
-  thread headingcorrection = thread(heading_correction);
-  double begin_time = Brain.timer(msec);
-  TurnToAngle(26, 500);
-  CurveCircle(90, 22, 2000);
-  Grab(-100);
-  DriveTo(4, 1000);
-  CurveCircle(66, 25, 1000);
-  Swing(135, -1, 1000);
-  //DriveTo(-1, 500);
-  Arm(100);
-  wait(500, msec);
-  Arm(30);
-  wait(500, msec);
-  Arm(0);
-  /*
-  ChassisControl(-4, -4);
-  wait(500, msec);
-  ChassisControl(0, 0);
-  */
-  DriveTo(18, 1500);
-  Grab(100); 
-  Arm(-100);
-  CurveCircle(95, -92, 2000);
-  DriveTo(3, 800, 6);
-  Arm(0);
-  Swing(-30, -1, 1000);
-  //DigitalOutA.set(true);
-  CurveCircle(-45, 30, 1000, false);
-  Swing(0, -1, 700);
-  /*
-  CurveCircle(-20, -13, 800, false);
-  //DigitalOutA.set(false);
-  CurveCircle(-70, -76, 2000, false);
-  Arm(100);
-  CurveCircle(-180, -17, 1000, false);
-  Arm(0);
-  */
-  //DigitalOutA.set(false);
-  TurnToPoint(0, 0, 1, 1000);
-  MoveToPoint(0, 0, 1, 4000);
-  TurnToPoint(0, -41, 1, 1000);
-  DriveTo(41, 2700, 11);
-  Arm(-100);
-  Grab(-100);
-  double end_time = Brain.timer(msec);
-  Brain.Screen.newLine();
-  Brain.Screen.printAt(80, 80, "%f", end_time - begin_time);
-}
-
 void NearElim() {
-  thread headingcorrection = thread(heading_correction);
   double begin_time = Brain.timer(msec);
-  DriveTo(52, 2500);
-  TurnToAngle(-90, 1000);
-  Grab(-100);
-  DriveTo(3, 1000);
-  DriveTo(-3, 1000);
-  Swing(0, -1, 1000);
+  thread armrelease = thread(ArmReleaseLeft);
   Grab(100);
-  DriveTo(17, 1200);
-  Swing(-120, -1, 1000);
-  //DigitalOutA.set(true);
-  CurveCircle(-135, 30, 1000, false);
-  Swing(-90, -1, 700);
-  CurveCircle(-110, -13, 800, false);
-  //DigitalOutA.set(false);
-  CurveCircle(-160, -76, 2000, false);
-  CurveCircle(-270, -17, 1000, false);
-  DriveTo(41, 2700, 11);
+  dirchangestart = false;
+  dirchangeend = true;
+  MoveToPoint(8, 49, 1, 2000, false);
+  dirchangestart = false;
+  dirchangeend = false;
+  DriveTo(-2, 800, false);
+  DigitalOutA.set(true);
+  MoveToPoint(21, 47, -1, 2000, false);
+  Swing(-80, -1, 800, false);
+  DigitalOutA.set(false);
+  MoveToPoint(-8, 20, 1, 2000, false);
+  Swing(-45, 1, 800, false);
+  DigitalOutB.set(true);
+  DriveTo(-8, 1000, false);
+  DigitalOutB.set(false);
+  dirchangestart = false;
+  dirchangeend = true;
+  MoveToPoint(20, -3, -1, 2000, false);
+  dirchangestart = false;
+  dirchangeend = false;
+  DriveTo(4, 800, false);
+  TurnToAngle(0, 700, false);
+  TurnToAngle(50, 300, false);
   Grab(-100);
-  wait(300, msec);
-  CurveCircle(-260, -280, 2000, false);
-  Swing(-300, -1, 800);
-  Arm(100);
+  correct_angle = NormalizeTarget(90);
+  DriveTo(17, 2000, false);
+  MoveToPoint(-15, 4, -1, 2000);
   double end_time = Brain.timer(msec);
   Brain.Screen.newLine();
   Brain.Screen.printAt(80, 80, "%f", end_time - begin_time);
@@ -740,52 +633,24 @@ void NearElim() {
 
 void NearAWP() {
   double begin_time = Brain.timer(msec);
-  /*
-  DigitalOutA.set(true);
-  TurnToAngle(-120, 1200, false, 4);
-  TurnToAngle(-80, 700, false);
-  DigitalOutA.set(false);
-  Arm(0);
-  CurveCircle(45, -15, 1500);
-  DriveToGoal(0, -1, 1000);
-  DriveTo(10, 1000, false);
-  TurnToAngle(35, 300);
-  DriveToGoal(0, -1, 1000);
-  xpos = 0;
-  ypos = 0;
   dirchangestart = false;
   dirchangeend = false;
-  MoveToPoint(6, 36, 1, 2000, false);
-  Grab(-100);
-  Swing(-35, 1, 800, false);
-  correct_angle = -45;
-  DriveTo(15, 2000, false);
-  ChassisControl(2, 2);
-  while(Distance13.value() > 80) {
-    wait(10, msec);
-  }
-  ChassisControl(0, 0);
-  */
-  dirchangestart = false;
-  dirchangeend = true;
-  DriveTo(9, 1500, false);
   DigitalOutB.set(true);
-  Swing(-60, -1, 1500, false, 3);
+  wait(200, msec);
+  TurnToAngle(-60, 1500, false, 6);
   DigitalOutB.set(false);
-  boomerang(11, 22, 45, 0.3, 2000);
+  boomerang(-12, 18, 0, 0.1, 1500);
   Grab(-100);
   wait(200, msec);
-  DriveTo(-3, 800, false);
-  TurnToAngle(110, 900, false);
-  dirchangestart = false;
-  dirchangeend = false;
-  MoveToPoint(5, -4, 1, 2000, false);
-  Grab(-100);
-  Swing(170, 1, 800, false);
-  correct_angle = 135;
-  DriveTo(15, 2000, false);
-  ChassisControl(2, 2);
-  while(Distance13.value() > 80) {
+  MoveToPoint(-5, 15, -1, 1500);
+  TurnToAngle(-160, 700, false);
+  MoveToPoint(1, 1, 1, 2000, false);
+  //boomerang(44, -6, 90, 0.6, 2000, 1);
+  correct_angle = NormalizeTarget(95);
+  DriveTo(20, 3000, false, 8);
+  ChassisControl(1.5, 1.5);
+  while(Distance13.value() > 100) {
+    ChassisControl(1.5, 1.5);
     wait(10, msec);
   }
   ChassisControl(0, 0);
@@ -795,14 +660,14 @@ void NearAWP() {
 }
 
 void NearBottomElim() {
-  awp_motor.stop(hold);
+  //awp_motor.stop(hold);
   Grab(100);
   MoveToPoint(10, 48, 1, 2000);
   MoveToPoint(22, 47, -1, 1500);
   TurnToAngle(-150, 1000);
   Arm(-12);
   wait(300, msec);
-  awp_motor.stop(coast);
+  //awp_motor.stop(coast);
   TurnToAngle(-90, 700);
   Arm(12);
   Swing(0, -1, 800, false);
@@ -811,7 +676,7 @@ void NearBottomElim() {
   TurnToAngle(-20, 600);
   Arm(-12);
   wait(300, msec);
-  awp_motor.stop(coast);
+  //awp_motor.stop(coast);
   TurnToAngle(90, 800);
   Arm(12);
   CurveCircle(180, -21, 2000);
@@ -821,7 +686,7 @@ void NearBottomElim() {
   TurnToAngle(45, 800);
   Arm(-12);
   wait(300, msec);
-  awp_motor.stop(coast);
+  //awp_motor.stop(coast);
   TurnToAngle(-30, 800);
   TurnToAngle(110, 800);
   Arm(12);
@@ -871,101 +736,161 @@ void ProgSkills() {
   double begin_time = Brain.timer(msec);
   dirchangestart = false;
   dirchangeend = false;
-  boomerang(-25, -15, 90, 0.5, 2000, -1, false);
+  hangangletarget = -15;
+  hangangletimelimit = 2000;
+  //thread hang_angle3 = thread(hangangle);
+  boomerang(15, 15, 90, 0.4, 1500, 1, false);
   Grab(-100);
-  DriveToGoal(0, -1, 1000);
-  MoveToPoint(-18, -9, 1, 2000, false);
-  Arm(100);
-  boomerang(-15, -13, -14, 0.3, 1500, -1, false);
-  TurnToAngle(-14, 200);
-  Arm(0);
-  DigitalOutA.set(true);
-  Grab(0);
+  DriveToGoal(0, 1, 1000);
+  xpos = 0;
+  ypos = 0;
+  boomerang(-17, 1, 155, 0.4, 1500, -1, false);
+  TurnToAngle(155, 200);
   double xpostemp = xpos;
   double ypostemp = ypos;
+  DigitalOutA.set(true);
   catapult_motor.spin(fwd, 12, volt);
-  //wait(30000, msec);
+  wait(28500, msec);
   catapult_motor.stop(coast);
+  hang_motor.stop(coast);
   DigitalOutA.set(false);
   xpos = xpostemp;
   ypos = ypostemp;
-  //catapultlaunch(47, 1000);
-  Arm(-100);
-  DriveTo(3, 500, false);
-  TurnToAngle(-70, 700, false);
-  awp_motor.stop(hold);
-  InertialA.setRotation(GetInertialHeading() + 360, degrees);
-  correct_angle = 235;
-  CurveCircle(180, 70, 2000, false);
-  DigitalOutA.set(true);
-  boomerang(-15, 108, 90, 0.5, 2500, -1, false);
-  DigitalOutA.set(false);
-  DriveToGoal(0, -1, 800);
-  for(int i = 0; i < 1; i++) {
-    MoveToPoint(-4, 80, 1, 1000, false);
-    DigitalOutA.set(false);
-    TurnToAngle(180, 400);
-    CurveCircle(90, 45, 1500, false);
-    DriveToGoal(0, -1, 700);
-  }
-  xpos = -40;
-  Swing(200, 1, 800, false);
-  DriveTo(20, 2000, false);
-  MoveToPoint(-47, 69, 1, 3000, false);
   Grab(-100);
-  TurnToAngle(270, 700, false);
-  Grab(0);
-  TurnToAngle(105, 700, false);
-  DigitalOutA.set(true);
-  DigitalOutB.set(true);
-  boomerang(-52, 80, 90, 0.5, 2000, -1, false);
-  Swing(150, -1, 1000, false);
+  MoveToPoint(-8, -20, 1, 2000, false);
+  MoveToPoint(-11, -50, 1, 2500, false);
   correct_angle = NormalizeTarget(180);
-  DriveToGoal(0, -1, 1000);
-  ypos = 101;
-  ChassisControl(12, 12);
-  wait(150, msec);
-  DigitalOutA.set(false);
-  DigitalOutB.set(false);
-  MoveToPoint(-51, 69, 1, 2000, false);
-  MoveToPoint(-65, 60, -1, 2000, false);
-  Grab(-100);
-  TurnToAngle(140, 700, false);
-  correct_angle = 180;
-  DigitalOutA.set(true);
+  xpostemp = xpos;
+  ypostemp = ypos;
+  DriveTo(3, 800, false);
+  correct_angle = NormalizeTarget(-170);
+  DriveTo(-16, 2000, false);
+  xpos = xpostemp;
+  ypos = ypostemp + 4;
+  Swing(130, 1, 2000, false);
   DigitalOutB.set(true);
-  DriveToGoal(0, -1, 1000);
-  ypos = 100;
-  ChassisControl(12, 12);
-  wait(100, msec);
-  Grab(0);
+  MoveToPoint(66, -60, 1, 3000, false);
+  Swing(130, 1, 500, false);
+  correct_angle = NormalizeTarget(100);
+  DriveTo(-15, 2000, false);
+  //correct_angle = NormalizeTarget(100);
+  DriveTo(16, 2000, false);
+  xpos = 65;
+  ypos = -60;
+  correct_angle = NormalizeTarget(100);
+  DriveTo(-2, 800, false);
+  TurnToAngle(150, 800, false);
   DigitalOutA.set(false);
-  DigitalOutB.set(false);
-  MoveToPoint(-68, 75, 1, 2000, false);
-  Swing(270, 1, 800, false);
-  MoveToPoint(-105, 72, 1, 2000, false);
-  Grab(-100);
-  TurnToAngle(-20, 700, false);
-  TurnToAngle(-90, 800, false);
-  MoveToPoint(-88, 80, -1, 2000, false);
-  if(InertialA.rotation() > NormalizeTarget(-140)) {
-    Swing(-150, -1, 800, false);
-  }
+  MoveToPoint(72, -22, -1, 2000, false);
   DigitalOutA.set(true);
-  DigitalOutB.set(true);
-  correct_angle = NormalizeTarget(-160);
-  DriveToGoal(0, -1, 1000);
-  ypos = 90;
-  ChassisControl(12, 12);
-  wait(100, msec);
+  Swing(-70, -1, 800, false);
+  correct_angle = NormalizeTarget(-50);
+  DriveTo(-6, 1000, false);
+  //correct_angle = NormalizeTarget(-45);
+  //DriveTo(-4, 1200, false);
   DigitalOutA.set(false);
   DigitalOutB.set(false);
-  TurnToAngle(-130, 800, false);
-  MoveToPoint(-134, 116, 1, 2000, false);
-  TurnToAngle(-15, 800, false);
+  MoveToPoint(110, -70, -1, 2000, false);
+  DigitalOutB.set(true);
+  MoveToPoint(108, -120, -1, 2000, false, 8);
+  correct_angle = NormalizeTarget(45);
+  DigitalOutB.set(true);
+  DigitalOutA.set(true);
+  DriveTo(-8, 1000, false);
+  DigitalOutA.set(false);
+  correct_angle = NormalizeTarget(80);
+  DriveToGoal(0, -1, 1200);
+  xpos = 0;
+  ypos = 0;
+  DriveTo(10, 1000, false);
+  DriveToGoal(0, -1, 1200);
+  xpos = 0;
+  ypos = 0;
   correct_angle = NormalizeTarget(0);
-  CurveCircle(NormalizeTarget(90), 40, 1500, false);
-  DriveToGoal(0, 1, 2000);
+  DriveTo(3, 800, false);
+  DigitalOutB.set(false);
+  MoveToPoint(10, 12, 1, 1500, false);
+  TurnToAngle(90, 500, false);
+  DriveTo(-3, 800, false);
+  DigitalOutB.set(true);
+  MoveToPoint(-12, 20, -1, 2000, false);
+  Swing(10, -1, 800, false);
+  correct_angle = NormalizeTarget(0);
+  DriveToGoal(0, -1, 2000);
+  DigitalOutB.set(false);
+  xpos = 0;
+  ypos = 0;
+  MoveToPoint(11, 8, 1, 1500, false);
+  TurnToAngle(145, 1000, false);
+  DigitalOutA.set(true);
+  DigitalOutB.set(true);
+  correct_angle = NormalizeTarget(180);
+  DriveTo(-2, 800, false);
+  Swing(100, -1, 800, false);
+  MoveToPoint(-5, 20, -1, 2000, false);
+  Swing(10, -1, 800, false);
+  correct_angle = NormalizeTarget(0);
+  DriveToGoal(0, -1, 1500);
+  xpos = 0;
+  ypos = 0;
+  DriveTo(4, 800, false);
+  DigitalOutA.set(false);
+  DigitalOutB.set(false);
+  MoveToPoint(4, 20, 1, 2000, false);
+  TurnToAngle(80, 800, false);
+  DigitalOutA.set(true);
+  DigitalOutB.set(true);
+  MoveToPoint(-26, 24, -1, 2000, false);
+  TurnToAngle(0, 800, false);
+  MoveToPoint(-25, 15, -1, 2000, false);
+  correct_angle = NormalizeTarget(0);
+  DriveToGoal(0, -1, 1000);
+  xpos = 0;
+  ypos = 0;
+  correct_angle = NormalizeTarget(0);
+  DriveTo(3, 600, false);
+  DigitalOutA.set(false);
+  DigitalOutB.set(false);
+  MoveToPoint(2, 19, 1, 2000, false);
+  Swing(-50, 1, 800, false);
+  correct_angle = NormalizeTarget(-90);
+  DigitalOutB.set(true);
+  Grab(-100);
+  MoveToPoint(-20, 30, 1, 2000, false);
+  BarCross();
+  DigitalOutB.set(false);
+  TurnToAngle(-150, 800, false);
+  correct_angle = NormalizeTarget(180);
+  DriveTo(-2, 800, false);
+  TurnToAngle(-25, 800, false);
+  DigitalOutA.set(true);
+  correct_angle = NormalizeTarget(0);
+  boomerang(2, -40, -45, 0.4, 3000, -1, false);
+  correct_angle = NormalizeTarget(-50);
+  DigitalOutB.set(true);
+  DriveTo(-8, 1000, false);
+  DigitalOutB.set(false);
+  correct_angle = NormalizeTarget(-90);
+  DriveToGoal(0, -1, 1000);
+  xpos = 0;
+  ypos = 0;
+  MoveToPoint(-18, 13, 1, 1500, false);
+  TurnToAngle(-20, 800, false);
+  correct_angle = NormalizeTarget(-45);
+  DriveTo(-12, 800, false);
+  correct_angle = NormalizeTarget(-80);
+  hangangletarget = -220;
+  hangangletimelimit = 4000;
+  thread hang_angle = thread(hangangle);
+  DriveToGoal(0, -1, 1200);
+  DigitalOutA.set(false);
+  xpos = 0;
+  ypos = 0;
+  MoveToPoint(-25, 13, 1, 1500, false);
+  boomerang(-30, 73, 0, 0.5, 2000, 1);
+  ChassisControl(2, 2);
+  DigitalOutF.set(false);
+  hang_motor.spin(fwd, 12, voltageUnits::volt);
   double end_time = Brain.timer(msec);
   Brain.Screen.newLine();
   Brain.Screen.printAt(80, 80, "%f", end_time - begin_time);
@@ -1060,6 +985,9 @@ void TestDriveMotors() {
 }
 
 void TestPID() {
+  ChassisControl(10, 10);
+  wait(300, msec);
+  BarCross();
   /*
   while(true) {
     Brain.Screen.printAt(0, 20, "%.2f", xpos);

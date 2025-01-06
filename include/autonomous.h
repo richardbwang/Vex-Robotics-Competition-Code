@@ -4,9 +4,6 @@ extern int AutonMax;
 
 void drawGUI();
 void selectAuton();
-void Far2Bar();
-void Far4Bar();
-void Far3();
 void Far6TopAntiDisruption();
 void Far6LowAntiDisruption();
 void Far6Low();
@@ -16,8 +13,6 @@ void Far6SafeBar();
 void Far6SafeNoBar();
 void FarAWPInside();
 void FarAWPOutside();
-void Far5();
-void Near();
 void NearElim();
 void NearBottomElim();
 void NearAWP();

@@ -11,19 +11,20 @@
 // Robot Configuration:
 // [Name]               [Type]        [Port(s)]
 // Controller1          controller                    
-// intake_motor         motor         8               
-// right_chassis1       motor         2               
-// right_chassis2       motor         6               
-// left_chassis1        motor         7               
-// left_chassis2        motor         5               
-// right_chassis3       motor         3               
-// left_chassis3        motor         4               
-// InertialA            inertial      21              
-// catapult_motor       motor         15              
-// awp_motor            motor         19              
-// Distance13           distance      9               
+// intake_motor         motor         18              
+// right_chassis1       motor         19              
+// right_chassis2       motor         14              
+// left_chassis1        motor         2               
+// left_chassis2        motor         1               
+// right_chassis3       motor         16              
+// left_chassis3        motor         3               
+// InertialA            inertial      15              
+// catapult_motor       motor         6               
+// hang_motor           motor         5               
+// Distance13           distance      17              
+// DigitalOutF          digital_out   B               
 // DigitalOutA          digital_out   A               
-// DigitalOutB          digital_out   B               
+// DigitalOutB          digital_out   C               
 // ---- END VEXCODE CONFIGURED DEVICES ----
 
 #include "vex.h"
@@ -74,6 +75,7 @@ void pre_auton(void) {
   ResetChassis();
   thread track_odom = thread(trackodom);
   catapult_motor.setPosition(0, degrees);
+  hang_motor.setPosition(0, degrees);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -100,7 +102,7 @@ void autonomous(void) {
       NearAWP();
       break;
     case 4:
-      Far6SafeNoBar();
+      Far6Safe();
       break;
     case 5:
       ProgSkills();
@@ -109,7 +111,7 @@ void autonomous(void) {
       Far6SafeBar();
       break;
     case 7:
-      Far3();
+      NearElim();
       break;
     case 8:
       tag();
@@ -135,6 +137,7 @@ void autonomous(void) {
 
 int Ch1, Ch2, Ch3, Ch4;
 bool L1, L2, R1, R2, BtnA, BtnB, BtnX, BtnY, BtnU, BtnD, BtnL, BtnR;
+bool first_time = true;
 int dipan_flag = 0, hang_flag = 0, wing_flag = 0;
 int xi_flag = 0, xi_flag1 = 0;
 
@@ -164,35 +167,33 @@ void usercontrol(void) {
   thread track_odom = thread(trackodom);
   catapult_motor.setPosition(0, degrees);
   wait(3000, msec);
-  ProgSkills();
   */
+  //ProgSkills();
   /*
-  awp_motor.stop(hold);
   dirchangestart = false;
   dirchangeend = false;
-  boomerang(-25, -15, 90, 0.5, 2000, -1, false);
+  boomerang(15, 15, 90, 0.4, 1500, 1, false);
   Grab(-100);
-  DriveToGoal(0, -1, 1000);
-  MoveToPoint(-18, -9, 1, 2000, false);
-  Arm(100);
-  boomerang(-15, -13, -15, 0.3, 1500, -1);
-  TurnToAngle(-15, 200);
-  Arm(0);
+  DriveToGoal(0, 1, 1000);
+  xpos = 0;
+  ypos = 0;
+  boomerang(-18, 0, 155, 0.4, 2000, -1, false);
+  TurnToAngle(155, 200);
   DigitalOutA.set(true);
-  Grab(0);
   catapult_motor.spin(fwd, 12, volt);
   while(true) {
-    if(Controller1.ButtonX.pressing() == true) {
+    if(Controller1.ButtonA.pressing() == true) {
       break;
     }
     wait(10, msec);
   }
   DigitalOutA.set(false);
-  catapult_motor.stop(coast);
   */
+  catapult_motor.stop(coast);
   Stop(coast);
   headingcorrection = false;
   Brain.Screen.clearScreen();
+  DigitalOutF.set(true);
 
   // User control code here, inside the loop  
   while (true) {
@@ -242,7 +243,7 @@ void usercontrol(void) {
 //=========================================================================
 
 //=========================================================================
-    if(BtnA) {
+    if(BtnX) {
       catapult_motor.spin(fwd, 12, volt);
     } else {
       catapult_motor.stop(coast);
@@ -255,43 +256,44 @@ void usercontrol(void) {
       intake_motor.stop(hold);
     }
 
-    if(BtnB) {
+    if(BtnY) {
       DigitalOutA.set(true);
+      DigitalOutB.set(true);
       wing_flag = 1;
     }
 
-    if(BtnX) {
+    if(BtnA) {
       DigitalOutA.set(true);
       wing_flag = 0;
     } else if(wing_flag == 0) {
       DigitalOutA.set(false);
     }
 
-    if(BtnY) {
+    if(BtnB) {
       DigitalOutB.set(true);
-    } else {
+    } else if(wing_flag == 0) {
       DigitalOutB.set(false);
     }
-
-    //Skills Controls
-    /*
-    if(BtnX) {
-      DigitalOutA.set(true);
-      DigitalOutB.set(true);
-    } else {
-      DigitalOutA.set(false);
-      DigitalOutB.set(false);
-    }
-    */
     
     if (L1) {
-      awp_motor.spin(fwd, -12, voltageUnits::volt);
-      hang_flag = 0;
+      first_time = false;
+      DigitalOutF.set(true);
+      if(hang_flag >= 10) {
+        hang_motor.spin(fwd, -12, voltageUnits::volt);
+      } else {
+        hang_motor.spin(fwd, 12, voltageUnits::volt);
+        hang_flag++;
+      }
     } else if(L2) {
-      awp_motor.spin(fwd, 12, voltageUnits::volt);
-      hang_flag = 1;
-    } else if(hang_flag == 0) { 
-      awp_motor.stop(coast);
+      first_time = false;
+      DigitalOutF.set(true);
+      hang_motor.spin(fwd, 12, voltageUnits::volt);
+    } else { 
+      hang_flag = 0;
+      hang_motor.stop(hold);
+      if(first_time == false) {
+        DigitalOutF.set(false);
+      }
     }
 
     wait(10, msec); 

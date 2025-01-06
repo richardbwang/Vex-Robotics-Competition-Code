@@ -13,10 +13,10 @@ bool headingcorrection = true;
 bool spinfw = false;
 bool dirchangestart = true;
 bool dirchangeend = true;
-double min_output = 8;
+double min_output = 10;
 double dkp = 1.5, dki = 0.1, dkd = 7;
 double tkp = 0.4, tki = 0, tkd = 4;
-double ckp = 0.8, cki = 0, ckd = 6;
+double ckp = 1, cki = 0, ckd = 5;
 double maxslewaccelfwd = 24;
 double maxslewdecelfwd = 24;
 double maxslewaccelrev = 24;
@@ -265,7 +265,7 @@ void DriveTo(double distance_in, double time_limit_msec, bool exit, double max_o
 
   double current_distance = 0, current_angle = 0;
 
-  while (((!piddistance.TargetArrived()) && Brain.timer(msec) - start_time <= time_limit_msec) || (exit == false && current_distance < distance_in)) {
+  while (((!piddistance.TargetArrived()) && Brain.timer(msec) - start_time <= time_limit_msec && exit) || (exit == false && current_distance < distance_in && Brain.timer(msec) - start_time <= time_limit_msec)) {
     current_distance = (fabs(((GetLeftRotationDegree() - startl) / 360.0) * wheel_distance_in) + fabs(((GetRightRotationDegree() - startr) / 360.0) * wheel_distance_in)) / 2;
     current_angle = GetInertialHeading();
     leftoutput = piddistance.Update(current_distance) * drive_direction;
@@ -281,6 +281,10 @@ void DriveTo(double distance_in, double time_limit_msec, bool exit, double max_o
         leftoutput = leftoutput / rightoutput * min_output;
         rightoutput = min_output;
       }
+    }
+    if(!exit) {
+      leftoutput = 24 * drive_direction;
+      rightoutput = 24 * drive_direction;
     }
 
     leftoutput = leftoutput + correction_output;
@@ -319,7 +323,7 @@ void DriveTo(double distance_in, double time_limit_msec, bool exit, double max_o
     ChassisControl(leftoutput, rightoutput);
     wait(10, msec);
   }
-  if(exit == true) {
+  if(exit) {
     prevleftoutput = 0;
     prevrightoutput = 0;
     Stop(vex::hold);
@@ -1156,7 +1160,7 @@ void boomerang(double x, double y, double a, double dlead, double time_limit_mse
   int add = dir > 0 ? 0 : 180;
   double maxslewfwd = dir > 0 ? maxslewaccelfwd : maxslewdecelrev;
   double maxslewrev = dir > 0 ? maxslewdecelfwd : maxslewaccelrev;
-  bool minspeed = false;
+  bool minspeed = false, cc = true;
   if(!exit) {
     if(!dirchangestart && dirchangeend) {
       maxslewfwd = dir > 0 ? 24 : maxslewdecelrev;
@@ -1197,7 +1201,7 @@ void boomerang(double x, double y, double a, double dlead, double time_limit_mse
   // Reset the chassis.
   double start_time = Brain.timer(msec);
   double leftoutput = 0, rightoutput = 0, correction_output = 0, ts = 0, ot = 0;
-  double exittolerance = 1;
+  double exittolerance = 3;
   bool pline = false, prevpline = true;
 
   double current_angle = 0, h = 0, cax = 0, cay = 0;
@@ -1208,7 +1212,11 @@ void boomerang(double x, double y, double a, double dlead, double time_limit_mse
     cay = y - h * cos(to_rad(a + add)) * dlead;
     piddistance.SetTarget(hypot(cax - xpos, cay - ypos) * dir);
     current_angle = GetInertialHeading();
-    leftoutput = piddistance.Update(0) * cos(to_rad(atan2(cax - xpos, cay - ypos) * 180 / M_PI + add - current_angle));
+    if(cc) {
+      leftoutput = piddistance.Update(0) * cos(to_rad(atan2(cax - xpos, cay - ypos) * 180 / M_PI + add - current_angle));
+    } else {
+      leftoutput = piddistance.Update(0);
+    }
     rightoutput = leftoutput;
     pline = ((ypos - y) * -cos(to_rad(NormalizeTarget(a))) <= (xpos - x) * sin(to_rad(NormalizeTarget(a))) + exittolerance);
     if(pline && !prevpline) {
@@ -1240,8 +1248,12 @@ void boomerang(double x, double y, double a, double dlead, double time_limit_mse
       pidh.SetTarget(NormalizeTarget(to_deg(atan2(x - xpos, y - ypos)) + add));
       correction_output = pidh.Update(current_angle);
     } else {
+      cc = true;
       pidh.SetTarget(NormalizeTarget(a));
       correction_output = pidh.Update(current_angle);
+      if(exit && hypot(x - xpos, y - ypos) < 5) {
+        break;
+      }
     }
 
     ts = sqrt(cp * getRadius(xpos, ypos, cax, cay, current_angle) * 9.8);
@@ -1297,7 +1309,7 @@ void boomerang(double x, double y, double a, double dlead, double time_limit_mse
     ChassisControl(leftoutput, rightoutput);
     wait(10, msec);
   }
-  if(exit == true) {
+  if(exit) {
     prevleftoutput = 0;
     prevrightoutput = 0;
     Stop(vex::hold);
@@ -1307,13 +1319,18 @@ void boomerang(double x, double y, double a, double dlead, double time_limit_mse
 }
 
 void hangangle() {
-  catapult_motor.stop(coast);
+  hang_motor.stop(coast);
   double threshold = 1;
-  double kp = 3;
+  double kp = 2;
   double ki = 0;
   double kd = 0;
   PID pid = PID(kp, ki, kd);
   
+  if((hang_motor.position(degrees) * 1 / 7) > hangangletarget) {
+    DigitalOutF.set(true);
+    hang_motor.spin(fwd, 12, voltageUnits::volt);
+    wait(150, msec);
+  }
   pid.SetTarget(hangangletarget);
   pid.SetIntegralMax(0);  
   pid.SetIntegralRange(5);
@@ -1327,15 +1344,11 @@ void hangangle() {
   double start_time = Brain.timer(msec);
   double output;
   while (!pid.TargetArrived() && Brain.timer(msec) - start_time <= hangangletimelimit) {
-    output = pid.Update(catapult_motor.position(degrees) * 12 / 84);
-    catapult_motor.spin(fwd, output, voltageUnits::volt);
+    output = pid.Update(hang_motor.position(degrees) * 1 / 7);
+    hang_motor.spin(fwd, output, voltageUnits::volt);
     wait(10, msec);
   }  
-  catapult_motor.stop(hold);
-}
-
-void Arm(double arm_power) {
-  awp_motor.spin(fwd, arm_power, voltageUnits::volt);
+  hang_motor.stop(hold);
 }
 
 void fwpid(double rpm) {
@@ -1391,11 +1404,45 @@ void fwpid(double rpm) {
   }
 }
 
-void ArmRelease() {
-  wait(100, msec);
-  Arm(5);
-  wait(400, msec);
-  Arm(-100);
-  wait(300, msec);
-  Arm(0);
+void ArmReleaseLeft() {
+  wait(150, msec);
+  DigitalOutB.set(true);
+  wait(150, msec);
+  DigitalOutB.set(false);
+}
+
+void ArmReleaseRight() {
+  wait(150, msec);
+  DigitalOutA.set(true);
+  wait(150, msec);
+  DigitalOutA.set(false);
+}
+
+void BarCross() {
+  int i = 0;
+  while(InertialA.pitch() < 15 && i < 100) {
+    ChassisControl(8, 8);
+    wait(10, msec);
+    i++;
+  }
+  i = 0;
+  while(InertialA.pitch() > 0 && i < 100) {
+    wait(10, msec);
+    i++;
+  }
+  i = 0;
+  while(InertialA.pitch() < 0 && i < 100) {
+    ChassisControl(6, 6);
+    wait(10, msec);
+    i++;
+  }
+  i = 0;
+  while(i < 50) {
+    ChassisControl(-4, -4);
+    wait(10, msec);
+    i++;
+  }
+  ChassisControl(0, 0);
+  xpos = 0;
+  ypos = 0;
 }

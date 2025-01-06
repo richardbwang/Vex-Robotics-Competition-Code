@@ -13,7 +13,7 @@ extern double hangangletarget;
 extern double hangangletimelimit;
 extern double v;
 
-const double wheel_distance_in = (48.0 / 84.0) * 4.2 * M_PI;
+const double wheel_distance_in = (48.0 / 72.0) * 4.2 * M_PI;
 
 void DriveControl(double left_power, double right_power);
 void ChassisControl(double left_power, double right_power);
@@ -42,4 +42,6 @@ void TurnToPoint(double x, double y, int d, double time_limit_msec);
 void MoveToPoint(double x, double y, int dir, double time_limit_msec, bool exit = true, double max_output = 12, bool overturn = false);
 void boomerang(double x, double y, double a, double dlead, double time_limit_msec, int dir = 1, bool exit = true, double max_output = 12, bool overturn = false);
 void hangangle();
-void ArmRelease();
+void ArmReleaseLeft();
+void ArmReleaseRight();
+void BarCross();
