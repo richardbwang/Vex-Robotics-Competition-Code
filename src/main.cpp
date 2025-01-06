@@ -11,20 +11,17 @@
 // Robot Configuration:
 // [Name]               [Type]        [Port(s)]
 // Controller1          controller                    
-// hang_motor           motor         2               
-// intake_motor         motor         7               
-// right_chassis1       motor         17              
-// right_chassis2       motor         18              
-// left_chassis1        motor         12              
-// left_chassis2        motor         13              
-// right_chassis3       motor         19              
-// left_chassis3        motor         14              
-// InertialA            inertial      15              
-// arm_motor            motor         8               
-// catapult_motor       motor         4               
-// Distance5            distance      5               
-// DigitalOutA          digital_out   A               
-// DigitalOutB          digital_out   B               
+// intake_motor         motor         20              
+// right_chassis1       motor         3               
+// right_chassis2       motor         4               
+// left_chassis1        motor         1               
+// left_chassis2        motor         9               
+// right_chassis3       motor         5               
+// left_chassis3        motor         2               
+// InertialA            inertial      13              
+// catapult_motor       motor         18              
+// awp_motor            motor         19              
+// Distance14           distance      14              
 // ---- END VEXCODE CONFIGURED DEVICES ----
 
 #include "vex.h"
@@ -72,7 +69,9 @@ void pre_auton(void) {
 
   double current_heading = InertialA.heading();
   Brain.Screen.print(current_heading);
+  ResetChassis();
   thread track_odom = thread(trackodom);
+  catapult_motor.setPosition(0, degrees);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -87,25 +86,25 @@ void pre_auton(void) {
 /*---------------------------------------------------------------------------*/
 
 void autonomous(void) {
-  AutonSelected = 9;
+  AutonSelected = 10;
   switch(AutonSelected) {
     case 1:
-      Far4Bar();
+      Far6LowAntiDisruption();
       break;
     case 2:
-      Far5();
+      NearAWP();
       break;
     case 3:
-      Near();
+      Far6Top();
       break;
     case 4:
-      NearElim();
+      Far6SafeNoBar();
       break;
     case 5:
       ProgSkills();
       break;
     case 6:
-      NearAWP();
+      Far6SafeBar();
       break;
     case 7:
       Far3();
@@ -114,6 +113,9 @@ void autonomous(void) {
       tag();
       break;
     case 9:
+      TestDriveMotors();
+      break;
+    case 10:
       TestPID();
       break;
   }
@@ -135,6 +137,49 @@ int dipan_flag = 0;
 int xi_flag = 0, xi_flag1 = 0;
 
 void usercontrol(void) {
+  /*
+  // Initializing Robot Configuration. DO NOT REMOVE!
+  vexcodeInit();
+  drawGUI();
+  Brain.Screen.pressed(selectAuton);
+  float point;
+  point = (InertialA.rotation(degrees));
+  
+  // Initializing Robot Configuration
+  vexcodeInit();
+  
+  //calibrate inertial sensor
+  InertialA.calibrate();
+
+  // waits for the Inertial Sensor to calibrate
+  while (InertialA.isCalibrating()) {
+    wait(100, msec);
+  }
+
+  double current_heading = InertialA.heading();
+  Brain.Screen.print(current_heading);
+  ResetChassis();
+  thread track_odom = thread(trackodom);
+  catapult_motor.setPosition(0, degrees);
+  wait(3000, msec);
+  ProgSkills();
+  */
+  /*
+  awp_motor.stop(hold);
+  boomerang(25, 14, 90, 0.5, 2000, 1, false);
+  Grab(-100);
+  DriveTo(50, 500);
+  boomerang(15, 17, 165, 0.5, 2000, -1);
+  catapult_motor.spin(fwd, 12, volt);
+  while(true) {
+    if(Controller1.ButtonX.pressing() == true) {
+      break;
+    }
+    wait(10, msec);
+  }
+  catapult_motor.stop(coast);
+  */
+  Stop(coast);
   headingcorrection = false;
   Brain.Screen.clearScreen();
 
@@ -174,27 +219,11 @@ void usercontrol(void) {
     Brain.Screen.setCursor(1, 1);
 
 //=========================================================================
-    if(BtnA) {
-      catapult_motor.spin(fwd, -100 * 0.128, volt);
-    } else if(Distance5.value() > distance_value) {
-      catapult_motor.spin(fwd, -100 * 0.128, volt);
-    } else {
-      catapult_motor.stop(hold);
-    }
-    
-    if(BtnX) {
-      DigitalOutA.set(true);
-      DigitalOutB.set(true);
-    } else if(BtnY) {
-      DigitalOutA.set(false);
-      DigitalOutB.set(false);
-    }
-
-    if(abs(Ch4) < 12 && abs(Ch3) > 12 ) {
-      DriveControl(Ch3, Ch3);
+    if(abs(Ch4) < 12 && abs(Ch3) > 12) {
+      DriveControl(Ch3 * 1.5, Ch3 * 1.5);
       dipan_flag = 0;
     } else if(abs(Ch4) >= 12 ) {
-      DriveControl((Ch3 + Ch4) * 0.55, (Ch3 - Ch4) * 0.55);
+      DriveControl((Ch3 + Ch4) * 0.8, (Ch3 - Ch4) * 0.8);
       dipan_flag = 1;
     } else {
       Stop(dipan_flag == 0 ? coast : brake);
@@ -202,116 +231,45 @@ void usercontrol(void) {
 //=========================================================================
 
 //=========================================================================
+    if(BtnA) {
+      catapult_motor.spin(fwd, 12, volt);
+    } else {
+      catapult_motor.stop(coast);
+    }
     if (R2) {
-      intake_motor.spin(fwd, 0.128 * 100, voltageUnits::volt);
+      intake_motor.spin(fwd, 12, voltageUnits::volt);
     } else if(R1) {
-      intake_motor.spin(fwd, 0.128 * -100, voltageUnits::volt);
+      intake_motor.spin(fwd, -12, voltageUnits::volt);
     } else { 
       intake_motor.stop(hold);
     }
-   
-    if (L1) {
-      arm_motor.spin(fwd, 0.128 * -100, voltageUnits::volt);
-    } else if (L2) {
-      arm_motor.spin(fwd, 0.128 * 100, voltageUnits::volt);
+
+    if(BtnX && BtnY) {
+      Arm(100);
+  for(int i = 0; i < 100; i++) {
+    if(InertialA.pitch() < 15) {
+      ChassisControl(12, 12);
     } else {
-      arm_motor.stop(coast);
+      break;
+    }
+    wait(10, msec);
+  }
+  ChassisControl(6, 0);
+  wait(200, msec);
+  ChassisControl(0, 0);
     }
     
+
+    if (L1) {
+      awp_motor.spin(fwd, -12, voltageUnits::volt);
+    } else if(L2) {
+      awp_motor.spin(fwd, 12, voltageUnits::volt);
+    } else { 
+      awp_motor.stop(coast);
+    }
+
     wait(10, msec); 
   }
-  /*
-  // Initializing Robot Configuration. DO NOT REMOVE!
-  vexcodeInit();
-  drawGUI();
-  Brain.Screen.pressed(selectAuton);
-  float point;
-  point = (InertialA.rotation(degrees));
-  
-  // Initializing Robot Configuration
-  vexcodeInit();
-  
-  //calibrate inertial sensor
-  InertialA.calibrate();
-
-  // waits for the Inertial Sensor to calibrate
-  while (InertialA.isCalibrating()) {
-    wait(100, msec);
-  }
-  double current_heading = InertialA.heading();
-  Brain.Screen.print(current_heading);
-  wait(4000, msec);
-  thread headingcorrection = thread(heading_correction);
-  thread pull_catapult = thread(pullcatapult);
-  double begin_time = Brain.timer(msec);
-  CurveCircle(90, 13, 1500, false);
-  Grab(-100);
-  DriveTo(20, 1500);
-  Swing(50, -1, 700);
-  CurveCircle(35, 13, 1500, false);
-  Swing(160, -1, 1000);
-  Arm(100);
-  wait(500, msec);
-  Arm(0);
-  catapultlaunch(47, 1000);
-  thread pull_catapult1 = thread(pullcatapult);
-  Arm(-100);
-  wait(500, msec);
-  TurnToAngle(30, 1000);
-  CurveCircle(0, 40, 1000, false);
-  CurveCircle(-10, 300, 2000, false);
-  DigitalOutB.set(true);
-  CurveCircle(-90, 40, 1500, false);
-  DriveTo(-10, 800);
-  DigitalOutB.set(false);
-  CurveCircle(-55, 20, 1000, false);
-  CurveCircle(-65, 600, 1000);
-  TurnToAngle(-40, 500);
-  CurveCircle(-90, 70, 1500);
-  TurnToAngle(0, 800);
-  DigitalOutB.set(false);
-  DriveTo(60, 3000);
-  DigitalOutA.set(true);
-  DigitalOutB.set(true);
-  CurveCircle(-60, 10, 1000, false);
-  CurveCircle(-65, 100, 1000, false);
-  Swing(0, -1, 800);
-  DriveTo(-25, 800);
-  DigitalOutA.set(false);
-  DigitalOutB.set(false);
-  TurnToAngle(-30, 800);
-  CurveCircle(-35, -350, 1000, false);
-  CurveCircle(-90, -20, 2000);
-  DigitalOutA.set(true);
-  DigitalOutB.set(true);
-  CurveCircle(-85, -100, 1000, false);
-  CurveCircle(-10, -30, 2000, false);
-  CurveCircle(0, -250, 1200), false;
-  DriveTo(-25, 800);
-  DigitalOutA.set(false);
-  DigitalOutB.set(false);
-  CurveCircle(10, 90, 1000, false);
-  Swing(80, 1, 1000);
-  CurveCircle(90, 150, 1000);
-  TurnToAngle(40, 800);
-  DigitalOutA.set(true);
-  DigitalOutB.set(true);
-  CurveCircle(30, 200, 1700, false);
-  Swing(0, -1, 1000);
-  DriveTo(-25, 800);
-  DigitalOutB.set(false);
-  TurnToAngle(-110, 800);
-  CurveCircle(90, -25, 2500, false);
-  DriveTo(-25, 1500);
-  DigitalOutA.set(false);
-  CurveCircle(55, -20, 1000, false);
-  CurveCircle(65, -600, 1000);
-  TurnToAngle(40, 500);
-  CurveCircle(90, -70, 1500);
-  double end_time = Brain.timer(msec);
-  Brain.Screen.newLine();
-  Brain.Screen.printAt(80, 80, "%f", end_time - begin_time);
-  */
 }
 
 //

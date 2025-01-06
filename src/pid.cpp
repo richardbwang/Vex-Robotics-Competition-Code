@@ -131,8 +131,8 @@ double PID::Update(double input) {
   // Calculate integral
   integral = ki * sum_error;
   
-  if (fabs(current_error) <= small_error_tolerance && 
-      fabs(derivative) <= derivative_tolerance && arrive == true) { 
+  if (arrive == true && fabs(current_error) <= small_error_tolerance && 
+      fabs(derivative) <= derivative_tolerance) { 
     // Exit when staying in tolerated region and 
     // maintaining a low enough speed for enough time
     if (Brain.timer(msec) - small_check_time >= small_error_duration) {
@@ -142,8 +142,8 @@ double PID::Update(double input) {
     small_check_time = Brain.timer(msec);
   }
 
-  if (fabs(current_error) <= big_error_tolerance && 
-      fabs(derivative) <= derivative_tolerance && arrive == true) { 
+  if (arrive == true && fabs(current_error) <= big_error_tolerance && 
+      fabs(derivative) <= derivative_tolerance) { 
     // Exit when staying in tolerated region and 
     // maintaining a low enough speed for enough time
     if (Brain.timer(msec) - big_check_time >= big_error_duration) {

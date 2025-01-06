@@ -26,6 +26,15 @@ double to_deg(double rad) {
   return (rad * 180 / M_PI);
 }
 
+double getRadius(double x, double y, double x1, double y1, double a) {
+  double dx = x1 - x;
+  double dy = y1 - y;
+  if((2 * dy * sin(to_rad(90 - a))) == 0) {
+    return 999;
+  }
+  return (dx * dx + dy * dy) / (2 * dy * sin(to_rad(90 - a)));
+}
+
 Graph::Graph(double var, int ms, double g) {
   least = var;
   greatest = var;

@@ -34,6 +34,8 @@ double to_rad(double deg);
 
 double to_deg(double rad);
 
+double getRadius(double x, double y, double x1, double y1, double a);
+
 class Graph {
   public:
     double* dataVar;
