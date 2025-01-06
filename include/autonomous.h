@@ -4,6 +4,7 @@ extern int AutonMax;
 
 void drawGUI();
 void intake_thread();
+void intake_color_red();
 void intake_color_blue();
 void selectAuton();
 void AwpStake(bool isright);

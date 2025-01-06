@@ -18,11 +18,19 @@ extern optical Optical;
 extern digital_out intakeraise;
 extern digital_out Doinker;
 extern distance distance_sensor;
+extern distance clip_sensor;
 extern motor arm_motor;
 extern rotation X;
 extern rotation Y;
 extern bumper arm_stop;
-extern digital_out Sort;
+extern vision Vision1;
+extern vision::signature redStakeSig;
+extern aivision aiVisionArmWall;
+extern aivision aiVisionArmRed;
+extern aivision aiVisionArmBlue;
+extern aivision::colordesc wallStakeColor;
+extern aivision::colordesc redStakeColor;
+extern aivision::colordesc blueStakeColor;
 
 /**
  * Used to initialize code/tasks/devices added using tools in VEXcode Pro.

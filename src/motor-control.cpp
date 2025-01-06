@@ -14,6 +14,7 @@ bool headingcorrection = true;
 bool spinfw = false;
 bool dirchangestart = true;
 bool dirchangeend = true;
+bool sorting = false;
 double min_output = 10;
 double dkp = 1.1, dki = 0.1, dkd = 7;
 double tkp = 0.4, tki = 0, tkd = 3;
@@ -28,7 +29,7 @@ double correct_angle = 0, cx = 0, cy = 0;
 double distance_value = 35;
 double distancebetweenwheels = 14;
 double cp = 2;
-double arm_angle_target = 0, arm_pid_target = 0, arm_load_target = 42, arm_store_target = 200, arm_score_target = 380;
+double arm_angle_target = 0, arm_pid_target = 0, arm_load_target = 50, arm_store_target = 200, arm_score_target = 380;
 double rushsetupangle = 18;
 
 void ChassisControl(double left_power, double right_power) {
@@ -1197,10 +1198,10 @@ void trackodomwheel() {
 
     double global_polar_angle = local_polar_angle - previous_heading - (orientation_delta_rad/2);
 
-    double X_position_delta = local_polar_length * cos(global_polar_angle); 
-    double Y_position_delta = local_polar_length * sin(global_polar_angle);
-    xpos += X_position_delta;
-    ypos += Y_position_delta;
+    double x_position_delta = local_polar_length * cos(global_polar_angle); 
+    double y_position_delta = local_polar_length * sin(global_polar_angle);
+    xpos += x_position_delta;
+    ypos += y_position_delta;
     previous_heading = new_heading;
     wait(10, msec);
   }
@@ -1893,12 +1894,24 @@ void wait_intake_thread() {
   }
 }
 
+void wait_load() {
+  int i = 0;
+  intake(12);
+  while(i++ < 100 && clip_sensor.objectDistance(mm) > 55) {
+    wait(10, msec);
+  }
+  wait(100, msec);
+  clipper.set(true);
+}
+
 void arm_load() {
   intake(12);
-  while(distance_sensor.objectDistance(mm) > 50) {
+  int i = 30;
+  while(i-- > 0 || distance_sensor.objectDistance(mm) > 50) {
     arm_pid(arm_load_target);
     wait(10, msec);
   }
+  arm_motor.stop(hold);
   intake(12);
   wait(600, msec);
   clipper.set(true);
@@ -1910,4 +1923,134 @@ void arm_load() {
     arm_pid(200);
     wait(10, msec);
   }
+}
+void armToAngle(double target, double time_limit_msec) {
+  PID pidarm = PID(0.5, 0, 0);
+  pidarm.SetTarget(target);
+  pidarm.SetIntegralMax(0);  
+  pidarm.SetIntegralRange(1);
+  pidarm.SetSmallBigErrorTolerance(1, 1);
+  pidarm.SetSmallBigErrorDuration(0, 0);
+  pidarm.SetDerivativeTolerance(5);
+  pidarm.SetArrive(true);
+  double start_time = Brain.timer(msec);
+  while (Brain.timer(msec) - start_time <= time_limit_msec) {
+    if (fabs(arm_motor.position(deg)-target) <= 3) {
+      break;
+    }
+    arm_motor.spin(fwd, pidarm.Update(arm_motor.position(deg)), volt);  
+  }
+  arm_motor.stop(brake);
+}
+
+void MoveToObject(aivision &vision, const aivision::colordesc &color, double centerX, double width, int dir, double time_limit_msec, bool exit, double max_output, bool overturn) {
+  Stop(vex::brakeType::coast);
+  isturning = true;
+  // Current robot setup, 3.25 inch wheel, 60/36 gear ratio.
+  // Tuned parameters, DO NOT CHANGE!!!
+  double threshold = 0.5;
+  int add = dir > 0 ? 0 : 180;
+  double maxslewfwd = dir > 0 ? maxslewaccelfwd : maxslewdecelrev;
+  double maxslewrev = dir > 0 ? maxslewdecelfwd : maxslewaccelrev;
+
+  PID piddistance = PID(0.15, 0, 0.4);
+  PID pidh = PID(0.05, 0, 0.15);
+
+  vision.takeSnapshot(color);
+  if (!vision.largestObject.exists) return;
+
+  double dY = width - vision.largestObject.width;
+  double dX = centerX - vision.largestObject.centerX;
+
+  piddistance.SetTarget(dY);
+  piddistance.SetIntegralMax(0);  
+  piddistance.SetIntegralRange(3);
+  piddistance.SetSmallBigErrorTolerance(threshold, threshold * 3);
+  piddistance.SetSmallBigErrorDuration(50, 250);
+  piddistance.SetDerivativeTolerance(5);
+  // 5 Iterations
+  
+  pidh.SetTarget(dX);
+  pidh.SetIntegralMax(0);  
+  pidh.SetIntegralRange(3);
+  pidh.SetSmallBigErrorTolerance(threshold, threshold * 3);
+  pidh.SetSmallBigErrorDuration(50, 250);
+  pidh.SetDerivativeTolerance(5);
+  // 5 Iterations
+
+  // Reset the chassis.
+  double start_time = Brain.timer(msec);
+  double leftoutput = 0, rightoutput = 0, correction_output = 0, prevleftoutput = 0, prevrightoutput = 0;
+  double exittolerance = 1;
+  bool pline = false, prevpline = true;
+
+  double current_angle = 0, ot = 0;
+  bool ch = true;
+  int hitCnt = 0;
+
+  while (Brain.timer(msec) - start_time <= time_limit_msec) {
+    vision.takeSnapshot(color);
+    if (!vision.largestObject.exists) {
+      break;
+    }
+ 
+    dY = width - vision.largestObject.width;
+    piddistance.SetTarget(dY);
+    leftoutput = piddistance.Update(0);
+    rightoutput = leftoutput;
+
+    dX = centerX - vision.largestObject.centerX;
+    if (fabs(dY) <= 5.0 && fabs(dX) <= 5.0) {
+      hitCnt++;
+      if (hitCnt > 3) {
+        break;
+      }
+    } else {
+      if (hitCnt>0) hitCnt--;
+    }
+    pidh.SetTarget(dX);
+    correction_output = -pidh.Update(0);
+    leftoutput = leftoutput + correction_output;
+    rightoutput = rightoutput - correction_output;
+
+    //Max Output Check
+    if(fabs(leftoutput) >= fabs(rightoutput) && leftoutput > max_output) {
+      rightoutput = rightoutput / leftoutput * max_output;
+      leftoutput = max_output;
+    } else if(fabs(rightoutput) > fabs(leftoutput) && rightoutput > max_output) {
+      leftoutput = leftoutput / rightoutput * max_output;
+      rightoutput = max_output;
+    } else if(fabs(leftoutput) > fabs(rightoutput) && leftoutput < -max_output) {
+      rightoutput = rightoutput / leftoutput * -max_output;
+      leftoutput = -max_output;
+    } else if(fabs(rightoutput) > fabs(leftoutput) && rightoutput < -max_output) {
+      leftoutput = leftoutput / rightoutput * -max_output;
+      rightoutput = -max_output;
+    }
+
+    //Max Acceleration/Deceleration Check
+    if(prevleftoutput - leftoutput > maxslewrev) {
+      leftoutput = prevleftoutput - maxslewrev;
+    }
+    if(prevrightoutput - rightoutput > maxslewrev) {
+      rightoutput = prevrightoutput - maxslewrev;
+    }
+    if(leftoutput - prevleftoutput > maxslewfwd) {
+      leftoutput = prevleftoutput + maxslewfwd;
+    }
+    if(rightoutput - prevrightoutput > maxslewfwd) {
+      rightoutput = prevrightoutput + maxslewfwd;
+    }
+    prevleftoutput = leftoutput;
+    prevrightoutput = rightoutput;
+    ChassisControl(leftoutput, rightoutput);
+    wait(10, msec);
+  }
+  if(exit == true) {
+    prevleftoutput = 0;
+    prevrightoutput = 0;
+    Stop(vex::hold);
+  }
+  correct_angle = GetInertialHeading();
+  isturning = false;
 }

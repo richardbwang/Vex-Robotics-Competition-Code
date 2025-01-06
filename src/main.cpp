@@ -11,25 +11,27 @@
 // Robot Configuration:
 // [Name]               [Type]        [Port(s)]
 // Controller1          controller                    
-// left_chassis1        motor         17              
-// left_chassis2        motor         19              
-// left_chassis3        motor         20              
+// left_chassis1        motor         17               
+// left_chassis2        motor         19               
+// left_chassis3        motor         20               
 // right_chassis1       motor         11              
-// right_chassis2       motor         12              
-// right_chassis3       motor         13              
-// intake_motor         motor         9               
-// InertialA            inertial      14              
+// right_chassis2       motor         12               
+// right_chassis3       motor         13               
+// intake_motor         motor         9              
+// InertialA            inertial      3              
 // mogo_mech            digital_out   E               
 // clipper              digital_out   B               
 // Optical              optical       15              
 // intakeraise          digital_out   A               
 // Doinker              digital_out   C               
-// distance_sensor      distance      2               
+// distance_sensor      distance      2              
+// clip_sensor          distance      5
 // arm_motor            motor         21              
 // X                    rotation      1               
-// Y                    rotation      10              
-// arm_stop             bumper        F               
-// Sort                 digital_out   H               
+// Y                    rotation      10               
+// Vision1              vision        7              
+// arm_stop             bumper        F           
+// aiVisionArm          aivsion       8
 // ---- END VEXCODE CONFIGURED DEVICES ----
 
 #include "vex.h"
@@ -57,7 +59,7 @@ competition Competition;
 /*---------------------------------------------------------------------------*/
 
 void arm_touch() {
-  wait(500, msec);
+  wait(200, msec);
   if (arm_stop.pressing()) {
     arm_motor.setPosition(-15, deg);
     wait(10, msec);
@@ -87,7 +89,7 @@ void pre_auton(void) {
   Brain.Screen.print(current_heading);
   ResetChassis();
   InertialA.setRotation(-rushsetupangle, degrees);
-  //InertialA.setRotation(rushsetupangle, degrees);
+  // InertialA.setRotation(rushsetupangle, degrees);
   thread track_odom = thread(trackodomwheel);
 }
 
@@ -160,7 +162,10 @@ int xi_flag = 0, xi_flag1 = 0;
 int intake_speed = 12;
 double temp = 0;
 bool wrong_color = false;
-bool arm_ready = false, raising = false;;
+bool raising = false;
+int arm_click = 0;
+int clipper_sensor_cnt = 0;
+double arm_load_pos = 47;
 
 bool detectcolor(bool isred){
   if (isred == true){
@@ -169,23 +174,23 @@ bool detectcolor(bool isred){
   return (Optical.hue() > 340 or Optical.hue() < 60);
 }
 
-void raiseBackpack() {
-  intake(12);
-  wait(600, msec);
-  clipper.set(true);
-  intake(-12);
-  wait(100, msec);
-  intake_stop();
-  wait(100, msec);
-  while(arm_ready) {
-    arm_pid(arm_store_target);
-    wait(10, msec);
-  }
+void armToLoadPos() {
+  raising = true;
+  arm_pid_target = arm_load_target;
+  arm_pid(arm_pid_target);
+  //arm_motor.spinToPosition(arm_load_pos, deg, 100, velocityUnits::pct, true);
+  //arm_motor.spinToPosition(arm_load_pos, deg, 50, velocityUnits::pct, true);
+  // Controller1.Screen.clearScreen();
+  // Controller1.Screen.setCursor(1, 1);
+  // Controller1.Screen.print("arm: %.2f", arm_motor.position(deg));
   raising = false;
 }
 
 void usercontrol(void) {
+  // thread icr = thread(intake_color_red);
   arm_stop.pressed(arm_touch);
+  arm_motor.setPosition(arm_load_pos, deg);
+
   // friction_test();
   Stop(coast);
   headingcorrection = false;
@@ -224,9 +229,20 @@ void usercontrol(void) {
     BtnD = Controller1.ButtonDown.pressing();
     BtnL = Controller1.ButtonLeft.pressing();
     BtnR = Controller1.ButtonRight.pressing();
-    //Controller1.Screen.clearScreen();
-    //Controller1.Screen.setCursor(1, 1);
-    //Controller1.Screen.print("X: %0.1f Y: %0.1f arm: %d", xpos, ypos);
+
+    // Controller1.Screen.clearScreen();
+    // Controller1.Screen.setCursor(1, 1);
+    // aiVisionArmRed.takeSnapshot(redStakeColor);
+    // if (aiVisionArmRed.objects[0].exists) {
+    //   Controller1.Screen.print("Cen: %d, w: %d", aiVisionArmRed.largestObject.centerX, aiVisionArmRed.largestObject.width);
+    // } else {
+    //   Controller1.Screen.print("no object");
+    // }
+
+    // Controller1.Screen.clearScreen();
+    // Controller1.Screen.setCursor(1, 1);
+    // Controller1.Screen.print("X: %0.1f Y: %0.1f", gps1.xPosition(inches), gps1.yPosition(inches));
+
     if(abs(Ch4) < 12 && abs(Ch3) > 12) {
       ChassisControl(Ch3 * 0.12 * 1.5, Ch3 * 0.12 * 1.5);
       dipan_flag = 0;
@@ -239,30 +255,47 @@ void usercontrol(void) {
       Stop(dipan_flag == 0 ? coast : brake);
     }
 
-    if(!raising && arm_ready && distance_sensor.objectDistance(mm) < 50) {
-      raising = true;
-      thread rb = thread(raiseBackpack);
-    }
-    if(!raising && abs(Ch2) < 30 && Ch1 < -50){
+    if(abs(Ch2) < 30 && Ch1 < -50){
       clipper.set(false);
-      arm_pid(arm_load_target);
-      arm_ready = true;
-    } else if(abs(Ch1) < 30 && Ch2 > 50) {
+      if (!raising) {
+        thread armToLoad = thread(armToLoadPos);
+      }
+    } else if(abs(Ch1) < 32 && Ch2 > 50) {
+      if (clip_sensor.objectDistance(mm) < 90 && arm_motor.position(deg) >=37 && arm_motor.position(deg) <= 57) {
+        intake_motor.spinFor(reverse, 30, degrees, 100, velocityUnits::pct, false);
+        wait(100, msec);
+      }
       arm_motor.spin(fwd, 12, volt);
-      arm_ready = false;
-    } else if(abs(Ch1) < 30 && Ch2 < -50){
+      raising = false;
+    } else if(abs(Ch1) < 32 && Ch2 < -50){
+      if (clip_sensor.objectDistance(mm) > 100) {
+        clipper.set(false);
+      }
       arm_motor.spin(fwd, -12, volt);
-      arm_ready = false;
+      raising = false;
     } else if(abs(Ch2) < 30 && Ch1 > 50){
-      arm_pid(arm_score_target);
-      arm_ready = false;
     } else if(!raising) {
       arm_motor.stop(hold);
     }
 
     if(BtnB) {
-      arm_motor.stop(coast);
-      arm_motor.setPosition(0, deg);
+      // MoveToObject(aiVisionArmBlue, blueStakeColor, 160, 82, 1, 10000, true, 8);
+      MoveToObject(aiVisionArmWall, wallStakeColor, 160, 92, 1, 10000, true, 8);
+      Stop(vex::hold);
+
+      aiVisionArmRed.takeSnapshot(redStakeColor);
+      // aiVisionArm.takeSnapshot(wallStakeColor);
+      Controller1.Screen.clearScreen();
+      Controller1.Screen.setCursor(1, 1);
+      if (aiVisionArmRed.objects[0].exists) {
+        Controller1.Screen.print("Cen: %d, w: %d", aiVisionArmRed.largestObject.centerX, aiVisionArmRed.largestObject.width);
+        // arm_motor.spin(fwd, 12, volt);
+        // wait(600, msec);
+        // arm_motor.stop(coast);
+        // DriveTo(-5, 1000, true, 5);
+      } else {
+        Controller1.Screen.print("no object");
+      }
     }
 
     if (BtnU){
@@ -271,11 +304,21 @@ void usercontrol(void) {
       clipper.set(true);
     }
 
-    if (R2 && !raising){
+    if (R2){
       intake(12);
+      if (clip_sensor.objectDistance(mm) < 70 && arm_motor.position(deg) >= 37 && arm_motor.position(deg) <= 57 ) {
+        clipper_sensor_cnt++;
+        if (clipper_sensor_cnt > 5) {
+          clipper.set(true);
+          arm_motor.stop(coast);
+          //arm_motor.setPosition(arm_load_target, deg);
+          //arm_motor.setPosition(arm_load_pos, deg);
+          clipper_sensor_cnt = 0;
+        }
+      }
     } else if(R1) {
       intake(-12);
-    } else if(!raising) {
+    } else {
       intake_stop(hold);
       Optical.setLight(ledState::off);
     }

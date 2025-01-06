@@ -157,23 +157,24 @@ bool detectcolor2(bool isred){
   }
   return (Optical.hue() > 340 or Optical.hue() < 60);
 }
+
 void intake_color_red(){
-  bool wrong_color=false;
+  //bool wrong_color=false;
   Optical.setLight(ledState::on);
   Optical.setLightPower(100);
-  bool isred=true;
   while(1) {
         Optical.setLightPower(100);
-        if (Optical.isNearObject() && detectcolor2(isred)) {
-          wrong_color = true;
-        }else if (Optical.isNearObject()){
-          wrong_color=false;
-        }
-        if (distance_sensor.objectDistance(distanceUnits::mm) < 50 && wrong_color) {
-          Sort.set(true);
-          wait(300, msec);
-          Sort.set(false);
-          wrong_color = false;
+        if (Optical.isNearObject() && Optical.color() == color(blue)) {
+          sorting = true;
+          intake(12);
+          int i = 0;
+          while(i++ < 50 && distance_sensor.objectDistance(mm) > 50) {
+            wait(10, msec);
+          }
+          wait(100, msec);
+          intake(0);
+          wait(400, msec);
+          sorting = false;
         }
     // very important
     wait(10, msec);
@@ -184,19 +185,19 @@ void intake_color_blue(){
   bool wrong_color=false;
   Optical.setLight(ledState::on);
   Optical.setLightPower(100);
-  bool isred=false;
   while(1) {
         Optical.setLightPower(100);
-        if (Optical.isNearObject() && detectcolor2(isred)) {
-          wrong_color = true;
-        }else if (Optical.isNearObject()){
-          wrong_color=false;
-        }
-        if (distance_sensor.objectDistance(distanceUnits::mm) < 50 && wrong_color) {
-          Sort.set(true);
-          //wait(300, msec);
-          //Sort.set(false);
-          //wrong_color = false;
+        if (Optical.isNearObject() && Optical.color() == color(red)) {
+          sorting = true;
+          intake(12);
+          int i = 0;
+          while(i++ < 50 && distance_sensor.objectDistance(mm) > 50) {
+            wait(10, msec);
+          }
+          wait(100, msec);
+          intake(0);
+          wait(400, msec);
+          sorting = false;
         }
     // very important
     wait(10, msec);
@@ -260,7 +261,7 @@ void AwpStake(bool isright){
   dirchangeend = false;
   clipper.set(true);
   arm_motor.setVelocity(100,rpm);
-  arm_motor.spinFor(200,degrees,false);
+  arm_motor.spinFor(260,degrees,false);
   intakeraise.set(true);
   thread intakethread=thread(intake_th);
   intake(12);
@@ -269,12 +270,15 @@ void AwpStake(bool isright){
   MoveToPoint(2.5, 6, -1, 2500, true, 6);
   TurnToAngle(-60,1000,true,8);
   mogo_mech.set(true);
-  MoveToPoint(0, 7.5, 1, 1000, true, 5);
+  MoveToObject(aiVisionArmRed,redStakeColor,160,82,1,1000,true,6);
+  // MoveToPoint(0, 7.5, 1, 1000, true, 5);
   clipper.set(false);
-  arm_motor.spinFor(420,degrees,false);
-  task::sleep(1000);
-  arm_motor.spinFor(-400,degrees,false);
+  arm(12);
+  arm_motor.setBrake(coast);
+  task::sleep(600);
+  arm_motor.stop();
   MoveToPoint(19,-1.5,-1,3000,false,8);
+  arm_motor.spinFor(-400,degrees,false);
   MoveToPoint(29,-7,-1,3000,true,4);
   mogo_mech.set(false);
   task::sleep(100);
@@ -291,8 +295,11 @@ void AwpStake(bool isright){
   TurnToAngle(45,1000,true,10);
   intake(0);
   mogo_mech.set(true);
-  MoveToPoint(32,10,1,1000,false,12);
-  MoveToPoint(32,15,1,1000,false,4);
+
+
+
+  // MoveToPoint(32,10,1,1000,false,12);
+  // MoveToPoint(32,15,1,1000,false,4);
   
 
 
@@ -341,28 +348,33 @@ void SigSoloAWP() {
   dirchangeend = false;
   mogo_mech.set(true);
   if(isRed) {
-    //thread ir = thread(intake_color_red);
+    thread ir = thread(intake_color_red);
   } else {
     thread ib = thread(intake_color_blue);
   }
   intakeraise.set(true);
   clipper.set(true);
-  arm_angle_target = 200;
-  thread at = thread(arm_thread);
+  arm_motor.setPosition(0, deg);
+  arm_pid_target = 260;
+  thread apl = thread(arm_pid_loop);
   thread it = thread(intake_thread);
   MoveToPoint(-5.5, 10, 1, 2000, true, 6);
   intakeraise.set(false);
   MoveToPoint(-2, 7, -1, 1500, true, 3);
   TurnToAngle(55, 800);
-  at.interrupt();
-  arm(12);
-  DriveTo(1.25, 700);
+  apl.interrupt();
+  if(isRed) {
+    MoveToObject(aiVisionArmRed, redStakeColor, 160, 82, 1, 1000, true, 8);
+  } else {
+    MoveToObject(aiVisionArmBlue, blueStakeColor, 160, 82, 1, 1000, true, 8);
+  }
   Stop(coast);
-  wait(600, msec);
+  arm(12);
+  wait(500, msec);
   DriveTo(-3, 800, false);
   clipper.set(false);
-  arm_angle_target = arm_store_target;
-  thread at2 = thread(arm_thread);
+  arm_pid_target = arm_store_target;
+  thread apl2 = thread(arm_pid_loop);
   MoveToPoint(-16, -6, -1, 2000, false);
   dirchangestart = true;
   dirchangeend = true;
@@ -407,6 +419,7 @@ void SigSoloAWP() {
   MoveToPoint(-32, 43, -1, 2500, false);
   intake(0);
   TurnToAngle(-50, 800, false);
+  apl2.interrupt();
   intake(12);
   arm(-12);
   MoveToPoint(-50, 38, 1, 2000);
@@ -497,25 +510,33 @@ void GoalRush() {
 */
 
 void SetupGoalRush() {
-  //TurnToAngleSetup(-rushsetupangle);
-  TurnToAngleSetup(rushsetupangle);
+  if(isRed) {
+    TurnToAngleSetup(-rushsetupangle);
+  } else {
+    TurnToAngleSetup(rushsetupangle);
+  }
 }
 
 void GoalRushStraight() {
+  if(isRed) {
+    thread icr = thread(intake_color_red);
+  } else {
+    thread icb = thread(intake_color_blue);
+  }
   mogo_mech.set(true);
   dirchangestart = false;
   dirchangeend = false;
   correct_angle = NormalizeTarget(-rushsetupangle);
   arm_motor.setPosition(0, deg);
-  arm_angle_target = 1500;
+  arm_angle_target = 440;
   thread at = thread(arm_thread);
-  DriveTo(22, 1500, false);
-  DriveTo(-20, 2500, false);
+  DriveTo(23, 1500, false);
   at.interrupt();
+  arm(8);
+  DriveTo(-20, 2500, false);
+  MoveToPoint(-20, 18, -1, 2000, false);
   arm_pid_target = arm_store_target - 20;
   thread apl = thread(arm_pid_loop);
-  //arm(-12);
-  MoveToPoint(-20, 18, -1, 2000, false);
   arm(0);
   dirchangestart = true;
   dirchangeend = true;
@@ -525,7 +546,7 @@ void GoalRushStraight() {
   intake(12);
   correct_angle = NormalizeTarget(90);
   DriveTo(1, 800, false);
-  MoveToPoint(-24, 34, 1, 2000, true, 8);
+  MoveToPoint(-22, 34, 1, 2000, true, 8);
   wait_intake_thread();
   correct_angle = NormalizeTarget(10);
   DriveTo(-7, 1000, false);
@@ -566,10 +587,11 @@ void GoalRushStraight() {
 }
 
 void skills() {
+  thread icr = thread(intake_color_red);
   mogo_mech.set(true);
   arm(12);
   DriveTo(-2, 800);
-  wait(1000, msec);
+  wait(800, msec);
   arm_motor.stop(coast);
   DriveTo(-3, 800, false);
   arm(-12);
@@ -586,55 +608,88 @@ void skills() {
   wait_intake();
   thread al = thread(arm_load);
   MoveToPoint(-46, -100, 1, 2500, true);
-  wait_intake();
-  wait(800, msec);
-  TurnToAngle(-60, 800, false);
+  wait_load();
   al.interrupt();
+  intake(-12);
   arm_pid_target = arm_store_target;
   thread apl2 = thread(arm_pid_loop);
+  wait(200, msec);
   intake(12);
-  MoveToPoint(-54, -59.5, 1, 2500, true, 8);
+  MoveToPoint(-55, -102, 1, 2000, true);
+  wait_intake_thread();
+  correct_angle = NormalizeTarget(-90);
+  DriveTo(-4, 800, false);
+  TurnToAngle(-60, 800, false);
+  thread ita = thread(intake_thread);
+  MoveToPoint(-53, -59.5, 1, 2500, true, 8);
   TurnToAngle(-90, 800);
   apl2.interrupt();
-  arm_angle_target = 390;
-  thread att = thread(arm_thread);
+  // arm_pid_target = arm_score_target;
+  // thread apll = thread(arm_pid_loop);
   DriveTo(1000, 800, false, 6);
   Stop(coast);
-  wait(300, msec);
-  att.interrupt();
-  arm(0);
-  DriveTo(-5, 1000, false);
+  //apll.interrupt();
+  arm_angle_target = 390;
+  thread at = thread(arm_thread);
+  wait(800, msec);
+  DriveTo(-3, 800, false);
+  at.interrupt();
   clipper.set(false);
+  Stop(hold);
+  arm(0);
+  arm_pid_target = arm_load_target;
+  thread apll2 = thread(arm_pid_loop);
+  wait(500, msec);
+  ita.interrupt();
+  wait_load();
+  apll2.interrupt();
+  // arm_pid_target = arm_score_target;
+  // thread apll3 = thread(arm_pid_loop);
+  DriveTo(1000, 600, false, 8);
+  Stop(coast);
+  // apll3.interrupt();
+  intake(-12);
+  arm_angle_target = 390;
+  thread at2 = thread(arm_thread);
+  wait(1000, msec);
+  DriveTo(-5, 800, false);
+  at2.interrupt();
+  clipper.set(false);
+  arm(0);
   arm_pid_target = arm_store_target;
-  thread apll = thread(arm_pid_loop);
+  thread aplll = thread(arm_pid_loop);
   TurnToAngle(-60, 800, false);
+  intake(12);
   MoveToPoint(-42, 1, 1, 3000, true, 5);
   wait_intake();
-  TurnToAngle(-90, 800, false);
+  correct_angle = NormalizeTarget(-90);
+  DriveTo(-8, 1200, false);
+  TurnToAngle(-180, 800, false);
   correct_angle = NormalizeTarget(135);
   DriveTo(-1000, 1500, false, 8);
   mogo_mech.set(true);
   DriveTo(3, 800, false);
   thread it = thread(intake_thread);
   TurnToAngle(180, 800, false);
-  MoveToPoint(-52, -6, 1, 2000, false);
-  correct_angle = NormalizeTarget(-170);
-  DriveTo(7, 1500, false, 8);
-  Swing(-70, 1, 1000, false);
+  MoveToPoint(-52, -8, 1, 2000, false);
+  // correct_angle = NormalizeTarget(-170);
+  // DriveTo(7, 1500, false, 8);
+  // Swing(-70, 1, 1000, false);
   Stop();
-  apll.interrupt();
+  aplll.interrupt();
   arm(-12);
   wait_intake_thread();
 
   //second quarter
-  MoveToPoint(3, -8.5, -1, 2500, false);
-  MoveToPoint(24, -8.5, -1, 2500, false, 5);
+  MoveToPoint(3, -9, -1, 2500, false);
+  MoveToPoint(24, -10, -1, 2500, false, 5);
   mogo_mech.set(false);
   wait(200, msec);
   it.interrupt();
+  TurnToAngle(-135, 800, false);
   intake(12);
-  MoveToPoint(26, -34, 1, 2000, false, 8);
-  MoveToPoint(47, -34, 1, 2000, false, 8);
+  MoveToPoint(28, -34, 1, 2000, false, 8);
+  MoveToPoint(47, -36, 1, 2000, false, 8);
   /*
   MoveToPoint(-5, -60, 1, 2000, true);
   wait_intake();
@@ -652,59 +707,60 @@ void skills() {
   correct_angle = NormalizeTarget(60);
   DriveTo(-8, 1000, false);
   thread al2 = thread(arm_load);
-  MoveToPoint(63, -11, 1, 2000, true);
-  wait_intake_thread();
+  MoveToPoint(65, -10, 1, 2000, true);
+  wait_load();
   TurnToAngle(180, 800, false);
   correct_angle = NormalizeTarget(-135);
   DriveTo(-1000, 1500, false, 8);
   mogo_mech.set(true);
   DriveTo(3, 800, false);
-  al2.interrupt();
-  arm_pid_target = arm_score_target;
-  thread apl4 = thread(arm_pid_loop);
   intake(0);
-  MoveToPoint(59, -66, 1, 2000, true, 8);
-  MoveToPoint(52, -56.5, -1, 2000, true, 8);
+  MoveToPoint(61, -66, 1, 2000, true, 8);
+  MoveToPoint(52, -58, -1, 2000, true, 8);
   TurnToAngle(90, 700);
   DriveTo(1000, 800, false, 6);
   Stop(coast);
-  apl4.interrupt();
+  al2.interrupt();
   arm_angle_target = 390;
-  arm_thread();
+  thread at3 = thread(arm_thread);
+  wait(1000, msec);
   DriveTo(-3, 800, false);
+  at3.interrupt();
   clipper.set(false);
   arm_pid_target = arm_store_target;
   thread apl6 = thread(arm_pid_loop);
   TurnToAngle(180, 800, false);
   thread itt = thread(intake_thread);
-  MoveToPoint(24, -80, 1, 2000, false);
+  MoveToPoint(28, -85, 1, 2000, false);
   TurnToAngle(180, 800, false);
   TurnToAngle(90, 800, false);
-  MoveToPoint(1, -105, -1, 3000, false, 4);
+  MoveToPoint(3, -108, -1, 3000, false, 5);
   mogo_mech.set(false);
   wait(200, msec);
   itt.interrupt();
   intake(12);
   MoveToPoint(48, -86, 1, 2000, false);
-  MoveToPoint(64, -79, 1, 2000, true, 8);
+  MoveToPoint(68, -78, 1, 2000, true, 8);
   wait_intake();
   TurnToAngle(135, 800, false);
   apl6.interrupt();
   thread al3 = thread(arm_load);
-  MoveToPoint(61, -105, 1, 2500, true);
-  wait_intake();
-  wait(800, msec);
+  MoveToPoint(69, -105, 1, 2500, true);
+  wait(200, msec);
+  wait_load();
   al3.interrupt();
-  arm_pid_target = arm_score_target;
+  intake(-12);
+  arm_pid_target = arm_store_target;
   thread apl7 = thread(arm_pid_loop);
+  wait(200, msec);
   intake(12);
   TurnToAngle(-150, 800, false);
-  MoveToPoint(51, -104, 1, 1400, false, 10);
-  MoveToPoint(51, -120, 1, 1600, false);
+  MoveToPoint(61, -103, 1, 1400, false, 10);
+  MoveToPoint(59, -120, 1, 1500, false);
   Stop(hold);
   Doinker.set(true);
   wait_intake();
-  TurnToAngle(45, 800, false, 8);
+  TurnToAngle(45, 800, false);
   correct_angle = NormalizeTarget(-45);
   Doinker.set(false);
   DriveTo(3, 800, false);
@@ -716,10 +772,14 @@ void skills() {
   wait(200, msec);
   DriveTo(5, 1000, false, 6);
   intake_motor.stop(coast);
-  MoveToPoint(10, -116, 1, 2500, true, 8);
+  MoveToPoint(14, -117, 1, 2500, true, 8);
+  apl7.interrupt();
+  arm_pid_target = 300;
+  thread apllll = thread(arm_pid_loop);
   TurnToAngle(180, 800);
   Stop(coast);
-  apl7.interrupt();
+  MoveToObject(aiVisionArmBlue, blueStakeColor, 160, 82, 1, 1000, true, 8);
+  apllll.interrupt();
   arm(12);
   wait(800, msec);
   DriveTo(-2, 800, false);
