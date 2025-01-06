@@ -7,6 +7,7 @@
 #include "motor-control.h"
 #include "autonomous.h"
 
+bool isRed = true;
 bool isturning = false;
 bool usevelocity = false;
 bool headingcorrection = true;
@@ -14,9 +15,9 @@ bool spinfw = false;
 bool dirchangestart = true;
 bool dirchangeend = true;
 double min_output = 10;
-double dkp = 2, dki = 0.1, dkd = 8;
-double tkp = 0.5, tki = 0.1, tkd = 3;
-double ckp = 1, cki = 0, ckd = 5;
+double dkp = 1.1, dki = 0.1, dkd = 7;
+double tkp = 0.4, tki = 0, tkd = 3;
+double ckp = 0.9, cki = 0, ckd = 5;
 double maxslewaccelfwd = 24;
 double maxslewdecelfwd = 24;
 double maxslewaccelrev = 24;
@@ -24,10 +25,11 @@ double maxslewdecelrev = 24;
 double prevleftoutput = 0, prevrightoutput = 0;
 double xpos = 0, ypos = 0;
 double correct_angle = 0, cx = 0, cy = 0;
+double distance_value = 35;
 double distancebetweenwheels = 14;
 double cp = 2;
-double hangangletarget = 0;
-double hangangletimelimit = 0;
+double arm_angle_target = 0, arm_pid_target = 0, arm_load_target = 42, arm_store_target = 200, arm_score_target = 380;
+double rushsetupangle = 18;
 
 void ChassisControl(double left_power, double right_power) {
   left_chassis1.spin(fwd, left_power, voltageUnits::volt);
@@ -40,9 +42,11 @@ void ChassisControl(double left_power, double right_power) {
 }
 
 void intake(double inpower) {
-  left_intake.spin(fwd, inpower, voltageUnits::volt);
+  intake_motor.spin(fwd, inpower, voltageUnits::volt);
+}
 
-  right_intake.spin(fwd, inpower, voltageUnits::volt);
+void arm(double armpower) {
+  arm_motor.spin(fwd, armpower, volt);
 }
 
 void ResetChassis() {
@@ -79,12 +83,12 @@ double NormalizeAngle(double angle) {
 }
 
 double NormalizeTarget(double angle) {
-  if (angle - inertial_sensor.rotation() > 180) {
-    while (angle - inertial_sensor.rotation() > 180) {
+  if (angle - GetInertialHeading() > 180) {
+    while (angle - GetInertialHeading() > 180) {
       angle = angle - 360;
     }
-  } else if (angle - inertial_sensor.rotation() < -180) {
-    while (angle - inertial_sensor.rotation() < -180) {
+  } else if (angle - GetInertialHeading() < -180) {
+    while (angle - GetInertialHeading() < -180) {
       angle = angle + 360;
     }
   }
@@ -93,7 +97,7 @@ double NormalizeTarget(double angle) {
 }
 
 double GetInertialHeading(bool normalize) {
-  double result = inertial_sensor.rotation(degrees);
+  double result = InertialA.rotation(degrees);
   if(normalize == false) {
     return(result);
   } else {
@@ -102,6 +106,7 @@ double GetInertialHeading(bool normalize) {
 }
 
 void TurnToAngle(double turn_angle, double time_limit_msec, bool exit, double max_output) {
+  turn_angle *= (isRed ? 1 : -1);
   Stop(vex::brakeType::coast);
   isturning = true;
   double threshold = 1;
@@ -201,11 +206,66 @@ void TurnToAngle(double turn_angle, double time_limit_msec, bool exit, double ma
   if(exit) {
     Stop(vex::hold);
   }
-  correct_angle = turn_angle;
+  correct_angle = turn_angle * (isRed ? 1 : -1);
+  isturning = false;
+}
+
+
+void TurnToAngleSetup(double turn_angle, double max_output) {
+  Stop(vex::brakeType::coast);
+  isturning = true;
+  double threshold = 1;
+  PID pid = PID(tkp, tki, tkd);
+  
+  turn_angle = NormalizeTarget(turn_angle);
+  pid.SetTarget(turn_angle);
+  pid.SetIntegralMax(0);  
+  pid.SetIntegralRange(3);
+  
+  pid.SetSmallBigErrorTolerance(threshold, threshold * 3);
+  pid.SetSmallBigErrorDuration(50, 250);
+  pid.SetDerivativeTolerance(threshold * 4.5);
+  pid.SetArrive(false);
+  // 5 Iterations
+  
+  // Draw the baseline.
+  double draw_amplifier = 230 / fabs(turn_angle);
+  Brain.Screen.clearScreen(black);
+  Brain.Screen.setPenColor(green);
+  Brain.Screen.drawLine(0, fabs(turn_angle) * draw_amplifier, 
+                        600, fabs(turn_angle) * draw_amplifier);
+  Brain.Screen.setPenColor(red);
+  
+  // Start the PID loop.
+  double start_time = Brain.timer(msec);
+  double output;
+  double current_heading = GetInertialHeading();
+  double previous_heading = 0;
+  int index = 1;
+    while (!pid.TargetArrived()) {
+      current_heading = GetInertialHeading();
+      output = pid.Update(current_heading);
+      
+      // Draw line
+      Brain.Screen.drawLine(
+          index * 3, fabs(previous_heading) * draw_amplifier, 
+          (index + 1) * 3, fabs(current_heading * draw_amplifier));
+      index++;
+      previous_heading = current_heading;
+      if(output > max_output) {
+        output = max_output;
+      } else if(output < -max_output) {
+        output = -max_output;
+      }
+      // End
+      ChassisControl(output, -output);
+      wait(10, msec);
+    }
   isturning = false;
 }
 
 void DriveTo(double distance_in, double time_limit_msec, bool exit, double max_output) {
+  correct_angle *= (isRed ? 1 : -1);
   double startl = GetLeftRotationDegree(), startr = GetRightRotationDegree();
   Stop(vex::brakeType::coast);
   isturning = true;
@@ -323,6 +383,7 @@ void DriveTo(double distance_in, double time_limit_msec, bool exit, double max_o
     prevrightoutput = 0;
     Stop(vex::hold);
   }
+  correct_angle *= (isRed ? 1 : -1);
   isturning = false;
 }
 
@@ -464,7 +525,7 @@ void DriveToPitch(double speed, double pitch, double time_limit_msec) {
   double start_time = Brain.timer(msec);
   double leftoutput = 0, rightoutput = 0, correction_output = 0;
 
-  while (inertial_sensor.pitch() < pitch && Brain.timer(msec) - start_time <= time_limit_msec) {
+  while (InertialA.pitch() < pitch && Brain.timer(msec) - start_time <= time_limit_msec) {
     leftoutput = speed;
     rightoutput = leftoutput;
     correction_output = pidh.Update(GetInertialHeading());
@@ -554,9 +615,7 @@ void Stop(brakeType type) {
 }
 
 void intake_stop(brakeType type){
-  left_intake.stop(type);
-
-  right_intake.stop(type);
+  intake_motor.stop(type);
 }
 
 void CurveCircle(double result_angle_deg, double center_radius, double time_limit_msec, bool exit, double max_output) {
@@ -828,6 +887,8 @@ void CurveCircle(double result_angle_deg, double center_radius, double time_limi
 }
 
 void Swing(double swing_angle, double drive_direction, double time_limit_msec, bool exit, double max_output) {
+  swing_angle *= (isRed ? 1 : -1);
+  correct_angle *= (isRed ? 1 : -1);
   Stop(vex::brakeType::coast);
   isturning = true;
   double threshold = 1;
@@ -1041,7 +1102,7 @@ void Swing(double swing_angle, double drive_direction, double time_limit_msec, b
   if(exit == true) {
     Stop(vex::hold);
   }
-  correct_angle = swing_angle;
+  correct_angle = swing_angle * (isRed ? 1 : -1);
   isturning = false;
 }
 
@@ -1094,7 +1155,59 @@ void trackodom() {
   }
 }
 
+void trackodomwheel() {
+  // ResetChassis();
+  double previous_heading = to_rad(GetInertialHeading());
+  double previous_x = X.position(degrees);
+  double previous_y = Y.position(degrees);
+  double sideways_tracker_center_distance = 4.9375;
+  double forward_tracker_center_distance = -4.34375;
+  double tracker_diameter = 2;
+
+  while(true) {
+    double forward_delta = (Y.position(degrees) - previous_y) * tracker_diameter * M_PI  / 360.0;
+    double sideways_delta = (X.position(degrees) - previous_x) * tracker_diameter * M_PI / 360.0;
+    double new_heading = to_rad(GetInertialHeading());
+    double orientation_delta_rad = new_heading - previous_heading;
+    previous_x = X.position(degrees);
+    previous_y = Y.position(degrees);
+
+    double local_x_pos;
+    double local_y_pos;
+
+    if (fabs(orientation_delta_rad) < 1e-6) {
+      local_x_pos = sideways_delta;
+      local_y_pos = forward_delta;
+    } else {
+      double sincalc= 2 * sin(orientation_delta_rad / 2);
+      local_x_pos = sincalc * ((sideways_delta/orientation_delta_rad) + sideways_tracker_center_distance); 
+      local_y_pos = sincalc * ((forward_delta/orientation_delta_rad) + forward_tracker_center_distance);
+    }
+
+    double local_polar_angle;
+    double local_polar_length;
+
+    if (fabs(local_x_pos) < 1e-6 && fabs(local_y_pos) < 1e-6){
+      local_polar_angle = 0;
+      local_polar_length = 0;
+    } else {
+      local_polar_angle = atan2(local_y_pos, local_x_pos); 
+      local_polar_length = sqrt(pow(local_x_pos, 2) + pow(local_y_pos, 2)); 
+    }
+
+    double global_polar_angle = local_polar_angle - previous_heading - (orientation_delta_rad/2);
+
+    double X_position_delta = local_polar_length * cos(global_polar_angle); 
+    double Y_position_delta = local_polar_length * sin(global_polar_angle);
+    xpos += X_position_delta;
+    ypos += Y_position_delta;
+    previous_heading = new_heading;
+    wait(10, msec);
+  }
+}
+
 void TurnToPoint(double x, double y, int d, double time_limit_msec) {
+  x *= (isRed ? 1 : -1);
   Stop(vex::brakeType::coast);
   isturning = true;
   double threshold = 1, add = 0;
@@ -1143,13 +1256,14 @@ void TurnToPoint(double x, double y, int d, double time_limit_msec) {
     wait(10, msec);
   }  
   Stop(vex::hold);
-  correct_angle = GetInertialHeading();
+  correct_angle = GetInertialHeading() * (isRed ? 1 : -1);
   cx = x;
   cy = y;
   isturning = false;
 }
 
 void MoveToPoint(double x, double y, int dir, double time_limit_msec, bool exit, double max_output, bool overturn) {
+  x *= (isRed ? 1 : -1);
   Stop(vex::brakeType::coast);
   isturning = true;
   // Current robot setup, 3.25 inch wheel, 60/36 gear ratio.
@@ -1216,6 +1330,156 @@ void MoveToPoint(double x, double y, int dir, double time_limit_msec, bool exit,
     rightoutput = leftoutput;
     pline = ((ypos - y) * -cos(to_rad(NormalizeTarget(current_angle + add))) <= (xpos - x) * sin(to_rad(NormalizeTarget(current_angle + add))) + exittolerance);
     if(pline && !prevpline) {
+      break;
+    }
+    prevpline = pline;
+
+    if(hypot(x - xpos, y - ypos) > 7 && ch == true) {
+      correction_output = pidh.Update(current_angle);
+    } else {
+      correction_output = 0;
+      ch = false;
+    }
+
+    //Minimum Output Check
+    if(minspeed) {
+      if(fabs(leftoutput) <= fabs(rightoutput) && leftoutput < min_output && leftoutput > 0) {
+        rightoutput = rightoutput / leftoutput * min_output;
+        leftoutput = min_output;
+      } else if(fabs(rightoutput) < fabs(leftoutput) && rightoutput < min_output && rightoutput > 0) {
+        leftoutput = leftoutput / rightoutput * min_output;
+        rightoutput = min_output;
+      } else if(fabs(leftoutput) <= fabs(rightoutput) && leftoutput > -min_output && leftoutput < 0) {
+        rightoutput = rightoutput / leftoutput * -min_output;
+        leftoutput = -min_output;
+      } else if(fabs(rightoutput) < fabs(leftoutput) && rightoutput > -min_output && rightoutput < 0) {
+        leftoutput = leftoutput / rightoutput * -min_output;
+        rightoutput = -min_output;
+      }
+    }
+
+    ot = fabs(leftoutput) + fabs(correction_output) - max_output;
+    if(ot > 0 && overturn) {
+      if(leftoutput > 0) {
+        leftoutput -= ot;
+      }
+      else {
+        leftoutput += ot;
+      }
+    }
+    rightoutput = leftoutput;
+    leftoutput = leftoutput + correction_output;
+    rightoutput = rightoutput - correction_output;
+
+    //Max Output Check
+    if(fabs(leftoutput) >= fabs(rightoutput) && leftoutput > max_output) {
+      rightoutput = rightoutput / leftoutput * max_output;
+      leftoutput = max_output;
+    } else if(fabs(rightoutput) > fabs(leftoutput) && rightoutput > max_output) {
+      leftoutput = leftoutput / rightoutput * max_output;
+      rightoutput = max_output;
+    } else if(fabs(leftoutput) > fabs(rightoutput) && leftoutput < -max_output) {
+      rightoutput = rightoutput / leftoutput * -max_output;
+      leftoutput = -max_output;
+    } else if(fabs(rightoutput) > fabs(leftoutput) && rightoutput < -max_output) {
+      leftoutput = leftoutput / rightoutput * -max_output;
+      rightoutput = -max_output;
+    }
+
+    //Max Acceleration/Deceleration Check
+    if(prevleftoutput - leftoutput > maxslewrev) {
+      leftoutput = prevleftoutput - maxslewrev;
+    }
+    if(prevrightoutput - rightoutput > maxslewrev) {
+      rightoutput = prevrightoutput - maxslewrev;
+    }
+    if(leftoutput - prevleftoutput > maxslewfwd) {
+      leftoutput = prevleftoutput + maxslewfwd;
+    }
+    if(rightoutput - prevrightoutput > maxslewfwd) {
+      rightoutput = prevrightoutput + maxslewfwd;
+    }
+    prevleftoutput = leftoutput;
+    prevrightoutput = rightoutput;
+    ChassisControl(leftoutput, rightoutput);
+    wait(10, msec);
+  }
+  if(exit == true) {
+    prevleftoutput = 0;
+    prevrightoutput = 0;
+    Stop(vex::hold);
+  }
+  correct_angle = GetInertialHeading() * (isRed ? 1 : -1);
+  isturning = false;
+}
+
+void MoveToPointEarly(double x, double y, int dir, double time_limit_msec, bool exit, double max_output, bool overturn) {
+  x *= (isRed ? 1 : -1);
+  Stop(vex::brakeType::coast);
+  isturning = true;
+  // Current robot setup, 3.25 inch wheel, 60/36 gear ratio.
+  // Tuned parameters, DO NOT CHANGE!!!
+  int add = dir > 0 ? 0 : 180;
+  double maxslewfwd = dir > 0 ? maxslewaccelfwd : maxslewdecelrev;
+  double maxslewrev = dir > 0 ? maxslewdecelfwd : maxslewaccelrev;
+  bool minspeed = false;
+  if(!exit) {
+    if(!dirchangestart && dirchangeend) {
+      maxslewfwd = dir > 0 ? 24 : maxslewdecelrev;
+      maxslewrev = dir > 0 ? maxslewdecelfwd : 24;
+    }
+    if(dirchangestart && !dirchangeend) {
+      maxslewfwd = dir > 0 ? maxslewaccelfwd : 24;
+      maxslewrev = dir > 0 ? 24 : maxslewaccelrev;
+      minspeed = true;
+    }
+    if(!dirchangestart && !dirchangeend) {
+      maxslewfwd = 24;
+      maxslewrev = 24;
+      minspeed = true;
+    }
+  }
+
+  //double maxslewfwd = 0.9;
+  //double maxslewrev = 0.3;
+  PID piddistance = PID(dkp - 0.6, 0, dkd-3);
+  PID pidh = PID(ckp, cki, ckd);
+
+  piddistance.SetTarget(hypot(x - xpos, y - ypos));
+  piddistance.SetIntegralMax(0);  
+  piddistance.SetIntegralRange(3);
+  piddistance.SetSmallBigErrorTolerance(1, 3);
+  piddistance.SetSmallBigErrorDuration(100, 250);
+  piddistance.SetDerivativeTolerance(5);
+  // 5 Iterations
+  
+  pidh.SetTarget(NormalizeTarget(to_deg(atan2(x - xpos, y - ypos)) + add));
+  pidh.SetIntegralMax(0);  
+  pidh.SetIntegralRange(1);
+  
+  pidh.SetSmallBigErrorTolerance(0, 0);
+  pidh.SetSmallBigErrorDuration(0, 0);
+  pidh.SetDerivativeTolerance(0);
+  pidh.SetArrive(false);
+  // 5 Iterations
+
+  // Reset the chassis.
+  double start_time = Brain.timer(msec);
+  double leftoutput = 0, rightoutput = 0, correction_output = 0, prevleftoutput = 0, prevrightoutput = 0;
+  double exittolerance = 1;
+  bool pline = false, prevpline = true;
+
+  double current_angle = 0, ot = 0;
+  bool ch = true;
+
+  while (Brain.timer(msec) - start_time <= time_limit_msec) {
+    pidh.SetTarget(NormalizeTarget(to_deg(atan2(x - xpos, y - ypos)) + add));
+    piddistance.SetTarget(hypot(x - xpos, y - ypos));
+    current_angle = GetInertialHeading();
+    leftoutput = piddistance.Update(0) * cos(to_rad(atan2(x - xpos, y - ypos) * 180 / M_PI + add - current_angle)) * dir;
+    rightoutput = leftoutput;
+    pline = ((ypos - y) * -cos(to_rad(NormalizeTarget(current_angle + add))) <= (xpos - x) * sin(to_rad(NormalizeTarget(current_angle + add))) + exittolerance);
+    if(hypot(x - xpos, y - ypos) < 25) {
       break;
     }
     prevpline = pline;
@@ -1300,6 +1564,8 @@ void MoveToPoint(double x, double y, int dir, double time_limit_msec, bool exit,
 }
 
 void boomerang(double x, double y, double a, double dlead, double time_limit_msec, int dir, bool exit, double max_output, bool overturn) {
+  x *= (isRed ? 1 : -1);
+  a *= (isRed ? 1 : -1);
   Stop(vex::brakeType::coast);
   isturning = true;
   // Current robot setup, 3.25 inch wheel, 60/36 gear ratio.
@@ -1462,25 +1728,25 @@ void boomerang(double x, double y, double a, double dlead, double time_limit_mse
     prevrightoutput = 0;
     Stop(vex::hold);
   }
-  correct_angle = a;
+  correct_angle = (a * (isRed ? 1 : -1));
   isturning = false;
 }
 
 
 void BarCross() {
   int i = 0;
-  while(inertial_sensor.pitch() < 15 && i < 100) {
+  while(InertialA.pitch() < 15 && i < 100) {
     ChassisControl(8, 8);
     wait(10, msec);
     i++;
   }
   i = 0;
-  while(inertial_sensor.pitch() > 0 && i < 100) {
+  while(InertialA.pitch() > 0 && i < 100) {
     wait(10, msec);
     i++;
   }
   i = 0;
-  while(inertial_sensor.pitch() < 0 && i < 100) {
+  while(InertialA.pitch() < 0 && i < 100) {
     ChassisControl(6, 6);
     wait(10, msec);
     i++;
@@ -1494,4 +1760,154 @@ void BarCross() {
   ChassisControl(0, 0);
   xpos = 0;
   ypos = 0;
+}
+
+void friction_test() {
+  long long sum = 0;
+  //left motor 1
+  Brain.Screen.clearScreen();
+  left_chassis1.spin(fwd, 12, volt);
+  wait(5000, msec);
+  for(int i = 0; i < 1000; i++) {
+    sum += left_chassis1.velocity(rpm);
+    wait(10, msec);
+  }
+  Brain.Screen.print(sum / 1000.0);
+  Brain.Screen.newLine();
+  left_chassis1.stop(hold);
+  wait(1000, msec);
+  left_chassis1.stop(coast);
+  //left motor 2
+  sum = 0;
+  left_chassis2.spin(fwd, 12, volt);
+  wait(5000, msec);
+  for(int i = 0; i < 1000; i++) {
+    sum += left_chassis2.velocity(rpm);
+    wait(10, msec);
+  }
+  Brain.Screen.print(sum / 1000.0);
+  Brain.Screen.newLine();
+  left_chassis2.stop(hold);
+  wait(1000, msec);
+  left_chassis2.stop(coast);
+  //left motor 3
+  sum = 0;
+  left_chassis3.spin(fwd, 12, volt);
+  wait(5000, msec);
+  for(int i = 0; i < 1000; i++) {
+    sum += left_chassis3.velocity(rpm);
+    wait(10, msec);
+  }
+  Brain.Screen.print(sum / 1000.0);
+  Brain.Screen.newLine();
+  left_chassis3.stop(hold);
+  wait(1000, msec);
+  left_chassis3.stop(coast);
+  //right motor 1
+  sum = 0;
+  right_chassis1.spin(fwd, 12, volt);
+  wait(5000, msec);
+  for(int i = 0; i < 1000; i++) {
+    sum += right_chassis1.velocity(rpm);
+    wait(10, msec);
+  }
+  Brain.Screen.print(sum / 1000.0);
+  Brain.Screen.newLine();
+  right_chassis1.stop(hold);
+  wait(1000, msec);
+  right_chassis1.stop(coast);
+  //right motor 2
+  sum = 0;
+  right_chassis2.spin(fwd, 12, volt);
+  wait(5000, msec);
+  for(int i = 0; i < 1000; i++) {
+    sum += right_chassis2.velocity(rpm);
+    wait(10, msec);
+  }
+  Brain.Screen.print(sum / 1000.0);
+  Brain.Screen.newLine();
+  right_chassis2.stop(hold);
+  wait(1000, msec);
+  right_chassis2.stop(coast);
+  //right motor 3
+  sum = 0;
+  right_chassis3.spin(fwd, 12, volt);
+  wait(5000, msec);
+  for(int i = 0; i < 1000; i++) {
+    sum += right_chassis3.velocity(rpm);
+    wait(10, msec);
+  }
+  Brain.Screen.print(sum / 1000.0);
+  Brain.Screen.newLine();
+  right_chassis3.stop(hold);
+  wait(1000, msec);
+  right_chassis3.stop(coast);
+}
+
+void arm_thread() {
+  if(arm_motor.position(deg) < arm_angle_target) {
+    while(arm_motor.position(deg) < arm_angle_target){
+      arm_motor.spin(fwd, 12, volt);
+    }
+  } else {
+    while(arm_motor.position(deg) > arm_angle_target){
+      arm_motor.spin(fwd, -12, volt);
+    }
+  }
+  arm_motor.stop(hold);
+}
+
+void arm_pid(double arm_target) {
+  PID pidarm = PID(0.5, 0, 1.5);
+  pidarm.SetTarget(arm_target);
+  pidarm.SetIntegralMax(0);  
+  pidarm.SetIntegralRange(1);
+  pidarm.SetSmallBigErrorTolerance(1, 1);
+  pidarm.SetSmallBigErrorDuration(0, 0);
+  pidarm.SetDerivativeTolerance(100);
+  pidarm.SetArrive(true);
+  arm_motor.spin(fwd, pidarm.Update(arm_motor.position(deg)), volt);
+}
+
+void arm_pid_loop() {
+  while(true) {
+    arm_pid(arm_pid_target);
+    wait(10, msec);
+  }
+}
+
+void wait_intake() {
+  int i = 0;
+  while(i < 50 && distance_sensor.objectDistance(mm) > 50) {
+    wait(10, msec);
+    i++;
+  }
+  wait(300, msec);
+}
+
+void wait_intake_thread() {
+  int i = 0;
+  while(i < 50 && distance_sensor.objectDistance(mm) > 50) {
+    wait(10, msec);
+    i++;
+  }
+}
+
+void arm_load() {
+  intake(12);
+  while(distance_sensor.objectDistance(mm) > 50) {
+    arm_pid(arm_load_target);
+    wait(10, msec);
+  }
+  intake(12);
+  wait(600, msec);
+  clipper.set(true);
+  intake(-12);
+  wait(100, msec);
+  intake_stop();
+  wait(100, msec);
+  while(true) {
+    arm_pid(200);
+    wait(10, msec);
+  }
 }

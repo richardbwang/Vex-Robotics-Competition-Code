@@ -10,16 +10,18 @@ extern motor left_chassis3;
 extern motor right_chassis1;
 extern motor right_chassis2;
 extern motor right_chassis3;
-extern motor right_intake;
-extern inertial inertial_sensor;
-extern motor left_intake;
-extern digital_out goal_clamp;
-extern digital_out PTO;
-extern optical optical_sensor;
-extern distance distance_sensor_arm;
-extern digital_out hang_deploy;
-extern digital_out filter;
+extern motor intake_motor;
+extern inertial InertialA;
+extern digital_out mogo_mech;
+extern digital_out clipper;
+extern optical Optical;
+extern digital_out intakeraise;
+extern digital_out Doinker;
 extern distance distance_sensor;
+extern motor arm_motor;
+extern rotation X;
+extern rotation Y;
+extern bumper arm_stop;
 extern digital_out Sort;
 
 /**
