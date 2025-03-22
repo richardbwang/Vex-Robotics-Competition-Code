@@ -17,8 +17,8 @@ bool dirchangeend = true;
 bool sorting = false;
 double min_output = 10;
 double dkp = 1.1, dki = 0.1, dkd = 7;
-double tkp = 0.4, tki = 0, tkd = 3;
-double ckp = 0.9, cki = 0, ckd = 5;
+double tkp = 0.3, tki = 0, tkd = 2.5;
+double ckp = 0.6, cki = 0, ckd = 4;
 double maxslewaccelfwd = 24;
 double maxslewdecelfwd = 24;
 double maxslewaccelrev = 24;
@@ -27,10 +27,10 @@ double prevleftoutput = 0, prevrightoutput = 0;
 double xpos = 0, ypos = 0;
 double correct_angle = 0, cx = 0, cy = 0;
 double distance_value = 35;
-double distancebetweenwheels = 14;
+double distancebetweenwheels = 12.3;
 double cp = 2;
-double arm_angle_target = 0, arm_pid_target = 0, arm_load_target = 50, arm_store_target = 200, arm_score_target = 380;
-double rushsetupangle = 18;
+double arm_angle_target = 0, arm_pid_target = 0, arm_load_target = 80, arm_store_target = 250, arm_score_target = 470;
+double rushsetupangle = -23;
 
 void ChassisControl(double left_power, double right_power) {
   left_chassis1.spin(fwd, left_power, voltageUnits::volt);
@@ -61,11 +61,11 @@ void ResetChassis() {
 }
 
 double GetLeftRotationDegree() {
-  return (left_chassis1.position(degrees) + left_chassis2.position(degrees) + left_chassis3.position(degrees)) / 4.0;
+  return (left_chassis1.position(degrees) + left_chassis2.position(degrees) + left_chassis3.position(degrees)) / 3.0;
 }
 
 double GetRightRotationDegree() {
-  return (right_chassis1.position(degrees) + right_chassis2.position(degrees) + right_chassis3.position(degrees)) / 4.0;
+  return (right_chassis1.position(degrees) + right_chassis2.position(degrees) + right_chassis3.position(degrees)) / 3.0;
 }
 
 //================================Chassis Movement=========================================//
@@ -1157,52 +1157,55 @@ void trackodom() {
 }
 
 void trackodomwheel() {
-  // ResetChassis();
-  double previous_heading = to_rad(GetInertialHeading());
-  double previous_x = X.position(degrees);
-  double previous_y = Y.position(degrees);
-  double sideways_tracker_center_distance = 4.9375;
-  double forward_tracker_center_distance = -4.34375;
+  xpos = 0;
+  ypos = 0;
+  ResetChassis();
+  double previousHeading = to_rad(GetInertialHeading());
+  double previousX = X.position(degrees);
+  double previousY = Y.position(degrees);
+  double SidewaysTracker_center_distance = -0.75;
+  // (13-1/8)/2 , 6.5+1/16
+  double ForwardTracker_center_distance = 0.15;
   double tracker_diameter = 2;
 
   while(true) {
-    double forward_delta = (Y.position(degrees) - previous_y) * tracker_diameter * M_PI  / 360.0;
-    double sideways_delta = (X.position(degrees) - previous_x) * tracker_diameter * M_PI / 360.0;
-    double new_heading = to_rad(GetInertialHeading());
-    double orientation_delta_rad = new_heading - previous_heading;
-    previous_x = X.position(degrees);
-    previous_y = Y.position(degrees);
+    double Forward_delta = (Y.position(degrees) - previousY) * tracker_diameter * M_PI  / 360.0;
+    double Sideways_delta = (X.position(degrees) - previousX) * tracker_diameter * M_PI / 360.0;
+    double newHeading = to_rad(GetInertialHeading());
+    double orientation_delta_rad = newHeading - previousHeading;
+    previousX = X.position(degrees);
+    previousY = Y.position(degrees);
 
-    double local_x_pos;
-    double local_y_pos;
+    double local_X_position;
+    double local_Y_position;
 
     if (fabs(orientation_delta_rad) < 1e-6) {
-      local_x_pos = sideways_delta;
-      local_y_pos = forward_delta;
+      local_X_position = Sideways_delta;
+      local_Y_position = Forward_delta;
     } else {
       double sincalc= 2 * sin(orientation_delta_rad / 2);
-      local_x_pos = sincalc * ((sideways_delta/orientation_delta_rad) + sideways_tracker_center_distance); 
-      local_y_pos = sincalc * ((forward_delta/orientation_delta_rad) + forward_tracker_center_distance);
+      local_X_position = sincalc * ((Sideways_delta/orientation_delta_rad) + SidewaysTracker_center_distance); 
+      local_Y_position = sincalc * ((Forward_delta/orientation_delta_rad) + ForwardTracker_center_distance);
     }
 
     double local_polar_angle;
     double local_polar_length;
 
-    if (fabs(local_x_pos) < 1e-6 && fabs(local_y_pos) < 1e-6){
+    if (fabs(local_X_position) < 1e-6 && fabs(local_Y_position) < 1e-6){
       local_polar_angle = 0;
       local_polar_length = 0;
     } else {
-      local_polar_angle = atan2(local_y_pos, local_x_pos); 
-      local_polar_length = sqrt(pow(local_x_pos, 2) + pow(local_y_pos, 2)); 
+      local_polar_angle = atan2(local_Y_position, local_X_position); 
+      local_polar_length = sqrt(pow(local_X_position, 2) + pow(local_Y_position, 2)); 
     }
 
-    double global_polar_angle = local_polar_angle - previous_heading - (orientation_delta_rad/2);
+    double global_polar_angle = local_polar_angle - previousHeading - (orientation_delta_rad/2);
 
-    double x_position_delta = local_polar_length * cos(global_polar_angle); 
-    double y_position_delta = local_polar_length * sin(global_polar_angle);
-    xpos += x_position_delta;
-    ypos += y_position_delta;
-    previous_heading = new_heading;
+    double X_position_delta = local_polar_length * cos(global_polar_angle); 
+    double Y_position_delta = local_polar_length * sin(global_polar_angle);
+    xpos += X_position_delta;
+    ypos += Y_position_delta;
+    previousHeading = newHeading;
     wait(10, msec);
   }
 }
@@ -1859,7 +1862,7 @@ void arm_thread() {
 }
 
 void arm_pid(double arm_target) {
-  PID pidarm = PID(0.5, 0, 1.5);
+  PID pidarm = PID(0.2, 0, 0.8);
   pidarm.SetTarget(arm_target);
   pidarm.SetIntegralMax(0);  
   pidarm.SetIntegralRange(1);
@@ -1897,11 +1900,11 @@ void wait_intake_thread() {
 void wait_load() {
   int i = 0;
   intake(12);
-  while(i++ < 100 && clip_sensor.objectDistance(mm) > 55) {
+  while(i++ < 100 /* && clip_sensor.objectDistance(mm) > 55*/) {
     wait(10, msec);
   }
   wait(100, msec);
-  clipper.set(true);
+  // clipper.set(true);
 }
 
 void arm_load() {
@@ -1914,13 +1917,13 @@ void arm_load() {
   arm_motor.stop(hold);
   intake(12);
   wait(600, msec);
-  clipper.set(true);
-  intake(-12);
-  wait(100, msec);
+  // clipper.set(true);
+  intake(-6);
+  wait(50, msec);
   intake_stop();
   wait(100, msec);
   while(true) {
-    arm_pid(200);
+    arm_pid(arm_store_target);
     wait(10, msec);
   }
 }

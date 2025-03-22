@@ -59,9 +59,9 @@ competition Competition;
 /*---------------------------------------------------------------------------*/
 
 void arm_touch() {
-  wait(200, msec);
+  wait(100, msec);
   if (arm_stop.pressing()) {
-    arm_motor.setPosition(-15, deg);
+    arm_motor.setPosition(-23, deg);
     wait(10, msec);
   }
 }
@@ -88,9 +88,20 @@ void pre_auton(void) {
   double current_heading = InertialA.heading();
   Brain.Screen.print(current_heading);
   ResetChassis();
-  InertialA.setRotation(-rushsetupangle, degrees);
+  // InertialA.setRotation(-rushsetupangle, degrees);
   // InertialA.setRotation(rushsetupangle, degrees);
   thread track_odom = thread(trackodomwheel);
+  Controller1.Screen.clearScreen();
+  while(!Competition.isEnabled()) {
+    Controller1.Screen.setCursor(1, 1);
+    Controller1.Screen.print(xpos);
+    Controller1.Screen.print(", ");
+    Controller1.Screen.print(ypos);
+    Controller1.Screen.print(", ");
+    Controller1.Screen.print(InertialA.rotation());
+    wait(100, msec);
+    Controller1.Screen.clearLine();
+  }
 }
 
 /*---------------------------------------------------------------------------*/
@@ -107,40 +118,53 @@ void pre_auton(void) {
 
 void autonomous(void) {
   arm_stop.pressed(arm_touch);
-  AutonSelected = 3;
-  isRed = true;
+  AutonSelected = 6;
   switch(AutonSelected) {
     case 1:
     // 1 red awp right
       // AwpStake(true);
       // // elim red;
-      SigSoloAWP();
+      isRed = true;
+      // AwpPositive();
+      NegativeAWP();
+      // SigSoloAWP();
+      // TestColorSort();
       break;
     case 2:
     // 2 blue awp left
       // AwpStake(false);
-      AwpStake(true);
+      isRed = true;
+      SigSoloAWP();
       break;  
     case 3:
       // goal rush
-      GoalRushStraight();
+      // GoalRushStraight();
+      isRed = true;
+      NegativeElim();
       break;
     case 4:
       // 4 blue awp left
-      skills();
+      isRed = false;
+      SetupAwp();
       break;
     case 5:
-      ElimMogoRed(); // 5 red elim right
+      isRed = false;
+      AwpPositive(); // 5 red elim right
       break;
     case 6:
-      ElimRing(false); // 5 blue elim left
+      isRed = true;
+      GoalRush(); // 5 blue elim left
       break;
     case 7:
+      isRed = true;
       skills();
       break;
     case 8:
+      isRed = true;
       SetupGoalRush();
       break;
+    case 9: 
+      testPID();
   }
 }
 
@@ -164,8 +188,9 @@ double temp = 0;
 bool wrong_color = false;
 bool raising = false;
 int arm_click = 0;
-int clipper_sensor_cnt = 0;
-double arm_load_pos = 47;
+double arm_load_pos = 80;
+double arm_score_pos = 410;
+bool intake_back = false;
 
 bool detectcolor(bool isred){
   if (isred == true){
@@ -174,22 +199,32 @@ bool detectcolor(bool isred){
   return (Optical.hue() > 340 or Optical.hue() < 60);
 }
 
+void intakeBack() {
+  intake_motor.spinFor(reverse, 30, degrees, 100, velocityUnits::pct, true);
+  wait(100, msec);
+  intake_back = false;
+}
+
 void armToLoadPos() {
-  raising = true;
-  arm_pid_target = arm_load_target;
-  arm_pid(arm_pid_target);
-  //arm_motor.spinToPosition(arm_load_pos, deg, 100, velocityUnits::pct, true);
-  //arm_motor.spinToPosition(arm_load_pos, deg, 50, velocityUnits::pct, true);
-  // Controller1.Screen.clearScreen();
-  // Controller1.Screen.setCursor(1, 1);
-  // Controller1.Screen.print("arm: %.2f", arm_motor.position(deg));
+  arm_motor.spinToPosition(arm_load_pos, deg, 100, velocityUnits::pct, true);
+  arm_motor.spinToPosition(arm_load_pos, deg, 50, velocityUnits::pct, true);
+  Controller1.Screen.clearScreen();
+  Controller1.Screen.setCursor(1, 1);
+  Controller1.Screen.print("arm: %.2f", arm_motor.position(deg));
+  raising = false;
+}
+
+void armToScoreTh() {
+  intake_motor.spinFor(reverse, 20, degrees, 100, velocityUnits::pct, true);
+  intake_back = false;
+  arm_motor.spinToPosition(arm_score_pos, deg, 100, velocityUnits::pct, true);
   raising = false;
 }
 
 void usercontrol(void) {
   // thread icr = thread(intake_color_red);
   arm_stop.pressed(arm_touch);
-  arm_motor.setPosition(arm_load_pos, deg);
+  arm_motor.setPosition(arm_load_pos - 7, deg);
 
   // friction_test();
   Stop(coast);
@@ -241,7 +276,7 @@ void usercontrol(void) {
 
     // Controller1.Screen.clearScreen();
     // Controller1.Screen.setCursor(1, 1);
-    // Controller1.Screen.print("X: %0.1f Y: %0.1f", gps1.xPosition(inches), gps1.yPosition(inches));
+    // Controller1.Screen.print("arm: %0.1f", arm_motor.position(deg));
 
     if(abs(Ch4) < 12 && abs(Ch3) > 12) {
       ChassisControl(Ch3 * 0.12 * 1.5, Ch3 * 0.12 * 1.5);
@@ -256,21 +291,20 @@ void usercontrol(void) {
     }
 
     if(abs(Ch2) < 30 && Ch1 < -50){
-      clipper.set(false);
-      if (!raising) {
+      if (!raising && fabs(arm_motor.position(deg) - arm_load_pos) > 10) {
+        raising = true;
         thread armToLoad = thread(armToLoadPos);
       }
-    } else if(abs(Ch1) < 32 && Ch2 > 50) {
-      if (clip_sensor.objectDistance(mm) < 90 && arm_motor.position(deg) >=37 && arm_motor.position(deg) <= 57) {
-        intake_motor.spinFor(reverse, 30, degrees, 100, velocityUnits::pct, false);
-        wait(100, msec);
+    } else if(abs(Ch1) < 40 && Ch2 > 50) {
+      if (fabs(arm_motor.position(deg) - arm_load_pos) <= 25) {
+        if (!intake_back) {
+          intake_back = true;
+          thread intakeBackThread = thread(intakeBack);
+        }
       }
       arm_motor.spin(fwd, 12, volt);
       raising = false;
     } else if(abs(Ch1) < 32 && Ch2 < -50){
-      if (clip_sensor.objectDistance(mm) > 100) {
-        clipper.set(false);
-      }
       arm_motor.spin(fwd, -12, volt);
       raising = false;
     } else if(abs(Ch2) < 30 && Ch1 > 50){
@@ -278,61 +312,34 @@ void usercontrol(void) {
       arm_motor.stop(hold);
     }
 
-    if(BtnB) {
-      // MoveToObject(aiVisionArmBlue, blueStakeColor, 160, 82, 1, 10000, true, 8);
-      MoveToObject(aiVisionArmWall, wallStakeColor, 160, 92, 1, 10000, true, 8);
-      Stop(vex::hold);
-
-      aiVisionArmRed.takeSnapshot(redStakeColor);
-      // aiVisionArm.takeSnapshot(wallStakeColor);
-      Controller1.Screen.clearScreen();
-      Controller1.Screen.setCursor(1, 1);
-      if (aiVisionArmRed.objects[0].exists) {
-        Controller1.Screen.print("Cen: %d, w: %d", aiVisionArmRed.largestObject.centerX, aiVisionArmRed.largestObject.width);
-        // arm_motor.spin(fwd, 12, volt);
-        // wait(600, msec);
-        // arm_motor.stop(coast);
-        // DriveTo(-5, 1000, true, 5);
-      } else {
-        Controller1.Screen.print("no object");
-      }
+    if(BtnY) {
     }
 
     if (BtnU){
-      clipper.set(false);
     } else if (BtnR){
-      clipper.set(true);
     }
 
     if (R2){
       intake(12);
-      if (clip_sensor.objectDistance(mm) < 70 && arm_motor.position(deg) >= 37 && arm_motor.position(deg) <= 57 ) {
-        clipper_sensor_cnt++;
-        if (clipper_sensor_cnt > 5) {
-          clipper.set(true);
-          arm_motor.stop(coast);
-          //arm_motor.setPosition(arm_load_target, deg);
-          //arm_motor.setPosition(arm_load_pos, deg);
-          clipper_sensor_cnt = 0;
-        }
-      }
     } else if(R1) {
       intake(-12);
     } else {
-      intake_stop(hold);
+      if (!intake_back) {
+        intake_stop(hold);
+      }
       Optical.setLight(ledState::off);
     }
 
-    if (L2) {
+    if (L1) {
       mogo_mech.set(false);
-    } else if(L1) {
+    } else if(L2) {
       mogo_mech.set(true);
     }
     
-    if (BtnL){
+    if (BtnX){
       intakeraise.set(true);
     }
-    if (BtnD){
+    if (BtnY){
       intakeraise.set(false);
     }
     if (BtnA){

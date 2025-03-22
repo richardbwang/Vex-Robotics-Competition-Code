@@ -13,24 +13,18 @@ extern motor right_chassis3;
 extern motor intake_motor;
 extern inertial InertialA;
 extern digital_out mogo_mech;
-extern digital_out clipper;
 extern optical Optical;
 extern digital_out intakeraise;
 extern digital_out Doinker;
 extern distance distance_sensor;
-extern distance clip_sensor;
-extern motor arm_motor;
+extern distance clamp_distance;
+extern distance front_distance;
+extern motor arm_motor1;
+extern motor arm_motor2;
+extern motor_group arm_motor;
 extern rotation X;
 extern rotation Y;
 extern bumper arm_stop;
-extern vision Vision1;
-extern vision::signature redStakeSig;
-extern aivision aiVisionArmWall;
-extern aivision aiVisionArmRed;
-extern aivision aiVisionArmBlue;
-extern aivision::colordesc wallStakeColor;
-extern aivision::colordesc redStakeColor;
-extern aivision::colordesc blueStakeColor;
 
 /**
  * Used to initialize code/tasks/devices added using tools in VEXcode Pro.

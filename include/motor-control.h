@@ -14,8 +14,9 @@ extern double distance_value;
 extern double arm_angle_target, arm_pid_target, arm_load_target, arm_store_target, arm_score_target;
 extern double v;
 extern double rushsetupangle;
+extern double dkp;
 
-const double wheel_distance_in = (48.0 / 84.0) * 4.2 * M_PI;
+const double wheel_distance_in = (36.0 / 48.0) * 3.17 * M_PI;
 
 void ChassisControl(double left_power, double right_power);
 void intake(double inpower);
