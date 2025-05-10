@@ -125,11 +125,13 @@ void color_sort(){
   }
 }
 
+/*
 void intakeStuck() {
   intake(-12);
   wait(40, msec);
   intake(12);
 }
+*/
 
 int numrings = 1;
 void intake_thread(){
@@ -167,6 +169,7 @@ void intake_thread(){
     wait(10, msec);
   }
   intake_stop(hold);
+  targetIntakeVolts = 0;
 }
 
 void intake_th(){
@@ -175,7 +178,8 @@ void intake_th(){
   while(!Optical.isNearObject() and distance_sensor.objectDistance(mm) > 50){
     wait(10, msec);
   }
-  intake_stop(brake);
+  intake_stop(hold);
+  targetIntakeVolts = 0;
 }
 
 bool detectcolor2(bool isred){
@@ -269,7 +273,6 @@ void r1095r(){
   wait(2000, msec);
   intake_stop();
   Stop();
-
 }
 
 // void AwpStake(bool isright){
@@ -377,6 +380,8 @@ void intakewait(){
 
 
 void SigSoloAWP() {
+  thread is = thread(intakeStuck);
+  correct_angle = isRed ? InertialA.rotation() : -InertialA.rotation();
   double start_time = Brain.timer(msec);
   // 10.92+1.625-7.5
   // 3.04+7.1875-8.5
@@ -387,22 +392,26 @@ void SigSoloAWP() {
   arm_angle_target = 600;
   thread arm_loop2 = thread(arm_thread);
   wait(500, msec);
-  correct_angle = InertialA.rotation();
   DriveTo(-3, 800, false);
   arm_loop2.interrupt();
   arm_pid_target = arm_store_target;
   thread arm_loop = thread(arm_pid_loop);
-  MoveToPoint(-18, (isRed ? -11 : -10), -1, 2000, false, 12);
-  MoveToPoint(-28, (isRed ? -11 : -10), -1, 2000, true, 4);
+  dirchangestart = true;
+  dirchangeend = true;
+  MoveToPoint(-16, (isRed ? -11 : -11), -1, 2000, false, 10);
+  MoveToPoint(-31, (isRed ? -10 : -10), -1, 2000, true, 4);
+  //ChassisControl(-0.5, -0.5);
+  dirchangestart = false;
+  dirchangeend = false;
   mogo_mech.set(true);
   task::sleep(100);
   TurnToAngle(160, 800, false);
   intake(12);
-  MoveToPoint(-47, (isRed ? -25 : -22), 1, 1500,true, 8);
-  wait(300, msec);
+  MoveToPoint(-46.5, (isRed ? -24 : -22), 1, 1500,true, 8);
+  wait(400, msec);
   MoveToPoint(-32, -10, -1,1000, true, 8);
-  thread ittt = thread(intake_th); 
   MoveToPoint(-32, -30, 1, 2500, true, 8);
+  thread ittt = thread(intake_th); 
   wait(100, msec);
   TurnToAngle(110, 800, false);
   // intakeraise.set(true);
@@ -417,8 +426,10 @@ void SigSoloAWP() {
   intake(12);
   thread it = thread(intake_th);
   DriveTo(4, 1500, false, 6);
+  arm_loop.interrupt();
+  arm(-12);
   TurnToAngle(30, 800, false);
-  MoveToPoint(-28, 40, -1, 2500, true, 5);
+  MoveToPoint(-28, isRed ? 41 : 39, -1, 2500, true, 5);
   dirchangestart = false;
   dirchangeend = false;
   mogo_mech.set(true);
@@ -427,13 +438,15 @@ void SigSoloAWP() {
   TurnToAngle(60, 800, false);
   it.interrupt();
   thread iw = thread(intakewait);
-  MoveToPoint(-31, 62, 1, 2500);
-  MoveToPoint(-31, 39, -1, 2500, true);
+  MoveToPoint(-31, 63, 1, 2500);
+  dirchangestart = true;
+  dirchangeend = true;
+  MoveToPoint(-31, 45, -1, 2500, false, 10);
+  dirchangestart = false;
+  dirchangeend = false;
   intake(0);
   TurnToAngle(-50, 800, false);
   intake(12);
-  arm_loop.interrupt();
-  arm(-12);
   MoveToPoint(-49, 36, 1, 2000);
   Controller1.Screen.print(Brain.timer(msec) - start_time);
 }
@@ -475,7 +488,7 @@ void NegativeAWP() {
   wait(400, msec);
   DriveTo(-5, 1200, true, 2);
   it1.interrupt();
-  intakeStuck();
+  //intakeStuck();
   wait(500, msec);
   thread it2 = thread(intake_th);
   DriveTo(1000, 600, false, 4);
@@ -483,7 +496,7 @@ void NegativeAWP() {
   wait(400, msec);
   DriveTo(-3, 1000, true, 2);
   it2.interrupt();
-  intakeStuck();
+  //intakeStuck();
   wait(500, msec);
   thread it = thread(intake_th);
   DriveTo(1000, 600, false, 4);
@@ -497,7 +510,7 @@ void NegativeAWP() {
   DriveTo(-4, 800, false, 12);
   TurnToAngle(60, 800, false);
   it.interrupt();
-  thread is = thread(intakeStuck);
+  //thread is = thread(intakeStuck);
   apl2.interrupt();
   MoveToPoint(-28, 7, 1, 2000, false, 8);
   Controller1.Screen.print(Brain.timer(msec) - start_time);
@@ -521,6 +534,7 @@ void rush_clamp() {
 }
 
 void GoalRush() {
+  thread is = thread(intakeStuck);
   dkp -= 0.2;
   xpos = (isRed ? 0 : 25.375);
   arm_motor.setPosition(arm_load_target - 7, deg);
@@ -548,56 +562,198 @@ void GoalRush() {
   rc.interrupt();
   Doinker.set(true);
   intakeraise.set(false);
-  wait(600, msec);
-  DriveTo(-3, 800, true);
+  wait(300, msec);
+  correct_angle = NormalizeTarget(isRed ? -15 : 15);
+  DriveTo(3, 800, true, 6);
+  DriveTo(-5, 1000, true);
   Doinker.set(false);
   wait(300, msec);
   if(isRed) {
-    MoveToPoint(-6, -8, -1, 1500, false);
-    MoveToPoint(-14, -10, -1, 1500, false);
-  } else {
-    TurnToAngle(80, 800, false);
-  }
-  /*
-  TurnToAngle(30, 800, false);
-  correct_angle = NormalizeTarget(60);
-  DriveTo(-13, 1500, true, 8);
-  correct_angle = NormalizeTarget(90);
-  DriveTo(6, 1200, true, 8);
-  */
-  MoveToPoint(isRed ? -36 : -40, 22, -1, 3000, true, 5);
-  mogo_mech.set(true);
-  wait(200, msec);
-  intake(12);
-  wait(400, msec);
-  mogo_mech.set(false);
-  DriveTo(3, 800, false);
-  if(isRed) {
+    TurnToAngle(-90, 800, false);
+    MoveToPoint(-4, 28, -1, 2000, true, 5);
+    mogo_mech.set(true);
+    wait(200, msec);
+    intake(12);
+    MoveToPoint(-7, 8, 1, 2000, true);
+    wait(300, msec);
+    intake(-12);
+    MoveToPoint(-16, -4, 1, 1500, false);
+    /*
+    TurnToAngle(-135, 800, false);
+    mogo_mech.set(false);
+    correct_angle = NormalizeTarget(-90);
+    DriveTo(-3, 800, false, 6);
+    */
+    correct_angle = NormalizeTarget(-125);
+    mogo_mech.set(false);
+    DriveTo(-15, 1700, true);
+    correct_angle = NormalizeTarget(-90);
+    DriveTo(5, 1000, false);
+    intake(-12);
+    TurnToAngle(180, 800, false);
     intake(0);
-    MoveToPoint(-10, 6, 1, 2000, true);
+    MoveToPoint(-34, 24, -1, 2000, false, 5);
+    mogo_mech.set(true);
+    al.interrupt();
+    arm_pid_target = arm_store_target + 300;
+    thread al5 = thread(arm_pid_loop);
+    MoveToPoint(-5, -6, 1, 2000, false, 10);
+    intake(12);
+    correct_angle = NormalizeTarget(135);
+    targetIntakeVolts = 0;
+    DriveTo(1000, 800, false, 4);
+    targetIntakeVolts = 12;
+    Stop(coast);
+    wait(300, msec);
+    if(isRed) {
+      int i = 0;
+      while(InertialA.rotation() > NormalizeTarget(30) && i < 100) {
+        ChassisControl(-5, 9);
+        wait(10, msec);
+        i++;
+      }
+    }
+    correct_angle = NormalizeTarget(150);
+    DriveTo(-14, 1700, false);
+    al5.interrupt();
+    arm_pid_target = arm_score_target - 80;
+    thread al2 = thread(arm_pid_loop);
+    /*
+    //Doinker.set(true);
+    DriveTo(-8, 1000, false);
+    DriveTo(4, 1200, true, 4);
+    wait(800, msec);
+    intake(0);
+    correct_angle = NormalizeTarget(145);
+    DriveTo(1000, 500, false, 4);
+    TurnToAngle(90, 800, false);
+    //Doinker.set(false);
+    */
+    TurnToAngle(60, 800, false);
+    MoveToPoint(3, 37, 1, 2000, true, 8);
+    TurnToAngle(42, 700);
+    ChassisControl(1, 1);
+    wait(400, msec);
+    al2.interrupt();
+    arm_motor.spin(fwd, 2, volt);
+  } else {
+    TurnToAngle(90, 800, false);
+    MoveToPoint(-37, 24, -1, 2000, true, 5);
+    mogo_mech.set(true);
+    wait(200, msec);
+    intake(12);
+    MoveToPoint(-7, 6, 1, 2000, true);
+    intake(-12);
+    MoveToPoint(-11, -8, 1, 1500, false);
+    /*
+    TurnToAngle(-135, 800, false);
+    mogo_mech.set(false);
+    correct_angle = NormalizeTarget(-90);
+    DriveTo(-3, 800, false, 6);
+    */
+    correct_angle = NormalizeTarget(-135);
+    mogo_mech.set(false);
+    DriveTo(-13, 1700, true);
+    correct_angle = NormalizeTarget(-90);
+    DriveTo(5, 1000, false);
+    intake(-12);
+    TurnToAngle(180, 800, false);
+    intake(0);
+    MoveToPoint(-24, 30, -1, 2000, false, 5);
+    mogo_mech.set(true);
+    al.interrupt();
+    arm_pid_target = arm_store_target + 300;
+    thread al5 = thread(arm_pid_loop);
+    MoveToPoint(-5, -6, 1, 2000, false, 10);
+    intake(12);
+    correct_angle = NormalizeTarget(135);
+    targetIntakeVolts = 0;
+    DriveTo(1000, 1000, false, 6);
+    targetIntakeVolts = 12;
+    Stop(coast);
+    wait(300, msec);
+    /*
+    if(!isRed) {
+      int i = 0;
+      while(InertialA.rotation() < NormalizeTarget(-30) && i < 100) {
+        ChassisControl(11, -5);
+        wait(10, msec);
+        i++;
+      }
+    }
+    */
+    correct_angle = NormalizeTarget(120);
+    DriveTo(-10, 2000, false);
+    al5.interrupt();
+    arm_pid_target = arm_score_target - 80;
+    thread al2 = thread(arm_pid_loop);
+    /*
+    //Doinker.set(true);
+    DriveTo(-8, 1000, false);
+    DriveTo(4, 1200, true, 4);
+    wait(800, msec);
+    intake(0);
+    correct_angle = NormalizeTarget(145);
+    DriveTo(1000, 500, false, 4);
+    TurnToAngle(90, 800, false);
+    //Doinker.set(false);
+    */
+    TurnToAngle(30, 800, false);
+    intake(12);
+    MoveToPoint(0.5, 35.5, 1, 2000, true, 8);
+    TurnToAngle(41, 700);
+    ChassisControl(1.5, 1.5);
+    wait(200, msec);
+    al2.interrupt();
+    arm_motor.spin(fwd, 2, volt);
+    wait(400, msec);
   }
-  intake(0);
-  MoveToPoint(isRed ? -7 : -26, 26, -1, 2500, true, 5);
-  mogo_mech.set(true);
-  wait(200, msec);
-  //TurnToAngle(180, 800, false);
-  MoveToPoint(isRed ? -10 : -5, -1, 1, 2000, false);
-  intake(12);
-  correct_angle = NormalizeTarget(isRed ? 120 : 150);
-  DriveTo(1000, 1000, false, 6);
-  Stop(coast);
-  wait(500, msec);
-  DriveTo(-10, 1200, false);
-  TurnToAngle(90, 800, false);
-  MoveToPoint(3, isRed ? 38: 37, 1, 2000, true, 8);
-  TurnToAngle(38, 700);
-  al.interrupt();
-  arm_pid_target = arm_score_target - 80;
-  thread al2 = thread(arm_pid_loop);
-  ChassisControl(1, 1);
-  wait(400, msec);
-  al2.interrupt();
-  arm_motor.spin(fwd, 2, volt);
+  // if(isRed) {
+  //   MoveToPoint(-6, -8, -1, 1500, false);
+  //   MoveToPoint(-14, -10, -1, 1500, false);
+  // } else {
+  //   TurnToAngle(80, 800, false);
+  // }
+  // /*
+  // TurnToAngle(30, 800, false);
+  // correct_angle = NormalizeTarget(60);
+  // DriveTo(-13, 1500, true, 8);
+  // correct_angle = NormalizeTarget(90);
+  // DriveTo(6, 1200, true, 8);
+  // */
+  // MoveToPoint(isRed ? -36 : -40, 22, -1, 3000, true, 5);
+  // mogo_mech.set(true);
+  // wait(200, msec);
+  // intake(12);
+  // wait(400, msec);
+  // mogo_mech.set(false);
+  // DriveTo(3, 800, false);
+  // if(isRed) {
+  //   intake(0);
+  //   MoveToPoint(-10, 6, 1, 2000, true);
+  // }
+  // intake(0);
+  // MoveToPoint(isRed ? -7 : -26, 26, -1, 2500, true, 5);
+  // mogo_mech.set(true);
+  // wait(200, msec);
+  // //TurnToAngle(180, 800, false);
+  // MoveToPoint(isRed ? -10 : -5, -1, 1, 2000, false);
+  // intake(12);
+  // correct_angle = NormalizeTarget(isRed ? 120 : 150);
+  // DriveTo(1000, 1000, false, 6);
+  // Stop(coast);
+  // wait(500, msec);
+  // DriveTo(-10, 1200, false);
+  // TurnToAngle(90, 800, false);
+  // MoveToPoint(3, isRed ? 38: 37, 1, 2000, true, 8);
+  // TurnToAngle(38, 700);
+  // al.interrupt();
+  // arm_pid_target = arm_score_target - 80;
+  // thread al2 = thread(arm_pid_loop);
+  // ChassisControl(1, 1);
+  // wait(400, msec);
+  // al2.interrupt();
+  // arm_motor.spin(fwd, 2, volt);
 }
 
 void SetupGoalRush() {
@@ -673,6 +829,7 @@ void GoalRushStraight() {
 }
 
 void skills() {
+  thread is = thread(intakeStuck);
   thread color_sort = thread(color_sort);
   mogo_mech.set(false);
   arm_motor.setPosition(arm_load_target - 7, deg);
@@ -680,7 +837,7 @@ void skills() {
   thread arm_loop2 = thread(arm_thread);
   correct_angle = InertialA.rotation();
   wait(400, msec);
-  DriveTo(-6, 1200, false, 5);
+  DriveTo(-7, 1400, false, 5);
   arm_loop2.interrupt();
   arm_pid_target = arm_store_target;
   thread aplt = thread(arm_pid_loop);
@@ -719,7 +876,10 @@ void skills() {
   apl2.interrupt();
   // arm_pid_target = arm_score_target;
   // thread apll = thread(arm_pid_loop);
-  DriveTo(1000, 800, false, 6);
+  //DriveTo(1000, 800, false, 6);
+  ChassisControl(6, 6);
+  wait(500, msec);
+  correct_angle = NormalizeTarget(InertialA.rotation());
   Stop(coast);
   //apll.interrupt();
   arm_angle_target = arm_score_target;
@@ -738,7 +898,10 @@ void skills() {
   apll2.interrupt();
   // arm_pid_target = arm_score_target;
   // thread apll3 = thread(arm_pid_loop);
-  DriveTo(1000, 600, false, 8);
+  //DriveTo(1000, 600, false, 8);
+  ChassisControl(6, 6);
+  wait(500, msec);
+  correct_angle = NormalizeTarget(-90);
   Stop(coast);
   // apll3.interrupt();
   intake_motor.stop(coast);
@@ -755,29 +918,33 @@ void skills() {
   intake(12);
   MoveToPoint(-44, 1, 1, 3000, true, 5);
   wait_intake();
+  //wait_intake();
+  TurnToAngle(-20, 800, false);
+  correct_angle = NormalizeTarget(-70);
+  DriveTo(-10, 1500, false);
+  //TurnToAngle(-90, 800, false);
+  MoveToPoint(-56, -9, 1, 2000, true);
   wait_intake();
-  correct_angle = NormalizeTarget(-90);
-  DriveTo(-8, 1200, false);
-  TurnToAngle(-180, 800, false);
-  correct_angle = NormalizeTarget(135);
+  TurnToAngle(-160, 800, false);
+  correct_angle = NormalizeTarget(160);
   intake(-12);
   mogo_mech.set(false);
   DriveTo(-1000, 1500, false, 8);
-  DriveTo(7, 1000, false);
+  DriveTo(3, 800, false);
   thread it = thread(intake_thread);
-  TurnToAngle(180, 800, false);
-  MoveToPoint(-56, -9, 1, 2000, false);
+  TurnToAngle(-160, 800, false);
+  //MoveToPoint(-56, -9, 1, 2000, false);
   // correct_angle = NormalizeTarget(-170);
   // DriveTo(7, 1500, false, 8);
   // Swing(-70, 1, 1000, false);
-  Stop();
+  //Stop();
   aplll.interrupt();
   arm(-12);
-  wait_intake_thread();
+  //wait_intake_thread();
 
   //second quarter
-  MoveToPoint(4, -9, -1, 2500, false);
-  MoveToPoint(26, -9.5, -1, 2500, false, 5);
+  MoveToPoint(0, -11, -1, 2500, false);
+  MoveToPoint(26, -11, -1, 2500, false, 5);
   mogo_mech.set(true);
   wait(200, msec);
   it.interrupt();
@@ -797,8 +964,8 @@ void skills() {
   */
   arm_motor.stop(coast);
   TurnToAngle(60, 800, false);
-  MoveToPoint(52, -14, 1, 2500, false, 8);
-  MoveToPoint(53, 2, 1, 2500, true, 6);
+  MoveToPoint(51, -14, 1, 2500, false, 8);
+  MoveToPoint(52, 1, 1, 2500, true, 6);
   wait_intake();
   correct_angle = NormalizeTarget(60);
   DriveTo(-8, 1000, false);
@@ -814,13 +981,16 @@ void skills() {
   MoveToPoint(62, -66, 1, 2000, true, 8);
   MoveToPoint(53, -58, -1, 2000, true, 8);
   TurnToAngle(90, 700);
-  DriveTo(1000, 800, false, 6);
+  //DriveTo(1000, 800, false, 6);
+  ChassisControl(6, 6);
+  wait(500, msec);
+  correct_angle = NormalizeTarget(InertialA.rotation());
   Stop(coast);
   al2.interrupt();
   intake_motor.stop(coast);
   arm_angle_target = arm_score_target;
   thread at3 = thread(arm_thread);
-  wait(1000, msec);
+  wait(800, msec);
   DriveTo(-5, 1000, false);
   at3.interrupt();
   // clipper.set(false);
@@ -828,9 +998,9 @@ void skills() {
   thread apl6 = thread(arm_pid_loop);
   TurnToAngle(150, 800, false);
   thread itt = thread(intake_thread);
-  MoveToPoint(28, -82, 1, 2000, false);
+  MoveToPoint(28, -80, 1, 2000, false);
   TurnToAngle(180, 800, false);
-  TurnToAngle(90, 800, false);
+  TurnToAngle(60, 800, false);
   MoveToPoint(3, -100, -1, 3000, false, 4);
   mogo_mech.set(true);
   wait(200, msec);
@@ -871,6 +1041,11 @@ void skills() {
   intake_motor.stop(coast);
   MoveToPoint(9, -110, 1, 2500, true, 8);
   TurnToAngle(180, 800);
+  //DriveTo(1000, 800, false, 6);
+  ChassisControl(6, 6);
+  wait(500, msec);
+  correct_angle = NormalizeTarget(InertialA.rotation());
+  DriveTo(-4, 800, true);
   Stop(coast);
   // MoveToObject(aiVisionArmBlue, blueStakeColor, 160, 82, 1, 1000, true, 8);
   apl7.interrupt();
@@ -880,7 +1055,7 @@ void skills() {
   // clipper.set(false);
   arm(-12);
   TurnToAngle(100, 800, false);
-  correct_angle = NormalizeTarget(30);
+  correct_angle = NormalizeTarget(45);
   DriveTo(-4, 800, false);
   correct_angle = NormalizeTarget(70);
   DriveTo(-1000, 1600, false);
@@ -948,7 +1123,7 @@ void NegativeElim() {
   MoveToPoint(-7, 12, 1, 3500, true, 6);
   DriveTo(-4, 800, false);
   intakeraise.set(false);
-  thread is = thread(intakeStuck);
+  //thread is = thread(intakeStuck);
   Stop(hold);
 }
 
@@ -1095,6 +1270,8 @@ void AwpPositive(){
 }
 
 void testPID() {
+  thread is = thread(intakeStuck);
+  intake(12);
   /*
   DriveTo(80, 5000);
   TurnToAngle(90, 2000);
@@ -1107,6 +1284,7 @@ void testPID() {
   TurnToAngle(0, 2000);
   DriveTo(-80, 5000);
   */
+  /*
   MoveToPoint(50, 50, 1, 4000, true, 6);
   MoveToPoint(20, 20, 1, 4000, true, 6);
   MoveToPoint(50, 50, 1, 4000, true, 6);
@@ -1114,4 +1292,5 @@ void testPID() {
   Controller1.Screen.print(xpos);
   Controller1.Screen.print("abc");
   Controller1.Screen.print(ypos);
+  */
 }

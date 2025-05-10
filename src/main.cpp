@@ -133,7 +133,7 @@ void autonomous(void) {
     case 2:
     // 2 blue awp left
       // AwpStake(false);
-      isRed = true;
+      isRed = false;
       SigSoloAWP();
       break;  
     case 3:
@@ -152,7 +152,7 @@ void autonomous(void) {
       AwpPositive(); // 5 red elim right
       break;
     case 6:
-      isRed = true;
+      isRed = false;
       GoalRush(); // 5 blue elim left
       break;
     case 7:
@@ -160,7 +160,7 @@ void autonomous(void) {
       skills();
       break;
     case 8:
-      isRed = true;
+      isRed = false;
       SetupGoalRush();
       break;
     case 9: 

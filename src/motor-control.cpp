@@ -15,6 +15,7 @@ bool spinfw = false;
 bool dirchangestart = true;
 bool dirchangeend = true;
 bool sorting = false;
+double targetIntakeVolts = 0;
 double min_output = 10;
 double dkp = 1.1, dki = 0.1, dkd = 7;
 double tkp = 0.3, tki = 0, tkd = 2.5;
@@ -43,7 +44,28 @@ void ChassisControl(double left_power, double right_power) {
 }
 
 void intake(double inpower) {
+  targetIntakeVolts = inpower;
   intake_motor.spin(fwd, inpower, voltageUnits::volt);
+}
+
+void intakeStuck() {
+  int i = 0;
+  while(true) {
+    if(targetIntakeVolts > 0 && intake_motor.velocity(rpm) <= 20) {
+      i++;
+    } else {
+      i = 0;
+    }
+    if(i > 10) {
+      int prevTarget = targetIntakeVolts;
+      intake(-12);
+      targetIntakeVolts = prevTarget;
+      wait(200, msec);
+      intake(targetIntakeVolts);
+      wait(100, msec);
+    }
+    wait(10, msec);
+  }
 }
 
 void arm(double armpower) {
@@ -615,7 +637,8 @@ void Stop(brakeType type) {
   right_chassis3.stop(type);
 }
 
-void intake_stop(brakeType type){
+void intake_stop(brakeType type) {
+  targetIntakeVolts = 0;
   intake_motor.stop(type);
 }
 
@@ -1163,9 +1186,9 @@ void trackodomwheel() {
   double previousHeading = to_rad(GetInertialHeading());
   double previousX = X.position(degrees);
   double previousY = Y.position(degrees);
-  double SidewaysTracker_center_distance = -0.75;
+  double SidewaysTracker_center_distance = -0.734375;
   // (13-1/8)/2 , 6.5+1/16
-  double ForwardTracker_center_distance = 0.15;
+  double ForwardTracker_center_distance = 0.046875;
   double tracker_diameter = 2;
 
   while(true) {
@@ -1875,6 +1898,9 @@ void arm_pid(double arm_target) {
 
 void arm_pid_loop() {
   while(true) {
+    if(arm_pid_target == arm_load_target) {
+      targetIntakeVolts = 0;
+    }
     arm_pid(arm_pid_target);
     wait(10, msec);
   }
@@ -1910,12 +1936,14 @@ void wait_load() {
 void arm_load() {
   intake(12);
   int i = 30;
+  targetIntakeVolts = 0;
   while(i-- > 0 || distance_sensor.objectDistance(mm) > 50) {
     arm_pid(arm_load_target);
     wait(10, msec);
   }
   arm_motor.stop(hold);
   intake(12);
+  targetIntakeVolts = 0;
   wait(600, msec);
   // clipper.set(true);
   intake(-6);
