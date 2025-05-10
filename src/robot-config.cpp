@@ -10,76 +10,29 @@ controller Controller1 = controller(primary);
 
 // VEXcode device constructors
 ////////////////////////////////
-// US Open
+// Worlds
 ///////////////////////////////
-motor left_chassis1 = motor(PORT11, ratio6_1, true);
-motor left_chassis2 = motor(PORT12, ratio6_1, true);
-motor left_chassis3 = motor(PORT13, ratio6_1, true);
-motor right_chassis1 = motor(PORT14, ratio6_1, false);
-motor right_chassis2 = motor(PORT15, ratio6_1, false);
-motor right_chassis3 = motor(PORT16, ratio6_1, false);
+motor left_chassis1 = motor(PORT5, ratio6_1, true);
+motor left_chassis2 = motor(PORT6, ratio6_1, true);
+motor left_chassis3 = motor(PORT7, ratio6_1, false);
+motor right_chassis1 = motor(PORT3, ratio6_1, false);
+motor right_chassis2 = motor(PORT4, ratio6_1, false);
+motor right_chassis3 = motor(PORT11, ratio6_1, true);
 motor arm_motor1 = motor(PORT2, ratio18_1, true);
 motor arm_motor2 = motor(PORT1, ratio18_1, false);
 motor_group arm_motor = motor_group(arm_motor1, arm_motor2);
-motor intake_motor = motor(PORT3, ratio18_1, false);
-inertial InertialA = inertial(PORT5);
-digital_out mogo_mech = digital_out(Brain.ThreeWirePort.G);
-optical Optical = optical(PORT10);
-digital_out intakeraise = digital_out(Brain.ThreeWirePort.E);
-digital_out Doinker = digital_out(Brain.ThreeWirePort.F);
-distance distance_sensor = distance(PORT21);
-distance clamp_distance = distance(PORT4);
-rotation X = rotation(PORT19, false);
-rotation Y = rotation(PORT7, true);
-bumper arm_stop = bumper(Brain.ThreeWirePort.H);
-// ////////////////////////////////
-// // State
-// ///////////////////////////////
-// motor left_chassis1 = motor(PORT12, ratio6_1, true);
-// motor left_chassis2 = motor(PORT5, ratio6_1, true);
-// motor left_chassis3 = motor(PORT20, ratio6_1, true);
-// motor right_chassis1 = motor(PORT11, ratio6_1, false);
-// motor right_chassis2 = motor(PORT19, ratio6_1, false);
-// motor right_chassis3 = motor(PORT13, ratio6_1, false);
-// motor arm_motor1 = motor(PORT4, ratio18_1, true);
-// motor arm_motor2 = motor(PORT2, ratio18_1, false);
-// motor_group arm_motor = motor_group(arm_motor1, arm_motor2);
-// motor intake_motor = motor(PORT3, ratio18_1, false);
-// inertial InertialA = inertial(PORT21);
-// digital_out mogo_mech = digital_out(Brain.ThreeWirePort.C);
-// optical Optical = optical(PORT7);
-// digital_out intakeraise = digital_out(Brain.ThreeWirePort.G);
-// digital_out Doinker = digital_out(Brain.ThreeWirePort.E);
-// distance distance_sensor = distance(PORT8);
-// distance clamp_distance = distance(PORT6);
-// distance front_distance = distance(PORT1);
-// rotation X = rotation(PORT10, false);
-// rotation Y = rotation(PORT9, true);
-// bumper arm_stop = bumper(Brain.ThreeWirePort.H);
-
-////////////////////////////////
-// Norcal Sig
-///////////////////////////////
-// motor left_chassis1 = motor(PORT1, ratio6_1, true);
-// motor left_chassis2 = motor(PORT2, ratio6_1, true);
-// motor left_chassis3 = motor(PORT3, ratio6_1, true);
-// motor right_chassis1 = motor(PORT8, ratio6_1, false);
-// motor right_chassis2 = motor(PORT9, ratio6_1, false);
-// motor right_chassis3 = motor(PORT10, ratio6_1, false);
-// motor intake_motor = motor(PORT13, ratio18_1, true);
-// inertial InertialA = inertial(PORT4);
-// digital_out mogo_mech = digital_out(Brain.ThreeWirePort.C);
-// optical Optical = optical(PORT14);
-// digital_out intakeraise = digital_out(Brain.ThreeWirePort.A);
-// digital_out Doinker = digital_out(Brain.ThreeWirePort.H);
-// distance distance_sensor = distance(PORT5);
-// distance front_distance = distance(PORT7);
-// motor arm_motor1 = motor(PORT18, ratio18_1, false);
-// motor arm_motor2 = motor(PORT19, ratio18_1, true);
-// motor_group arm_motor = motor_group(arm_motor1, arm_motor2);
-// rotation X = rotation(PORT11, false);
-// rotation Y = rotation(PORT12, true);
-// bumper arm_stop = bumper(Brain.ThreeWirePort.B);
+motor intake_motor = motor(PORT8, ratio18_1, true);
+inertial InertialA = inertial(PORT9);
+digital_out mogo_mech = digital_out(Brain.ThreeWirePort.E);
+optical Optical = optical(PORT18);
+digital_out intakeraise = digital_out(Brain.ThreeWirePort.F);
+digital_out Doinker = digital_out(Brain.ThreeWirePort.G);
+digital_out cage = digital_out(Brain.ThreeWirePort.H);
+distance distance_sensor = distance(PORT20);
+distance clamp_distance = distance(PORT12);
+rotation X = rotation(PORT13, true);
+rotation Y = rotation(PORT19, true);
+bumper arm_stop = bumper(Brain.ThreeWirePort.D);
 
 // VEXcode generated functions
 // define variable for remote controller enable/disable

@@ -118,7 +118,7 @@ void pre_auton(void) {
 
 void autonomous(void) {
   arm_stop.pressed(arm_touch);
-  AutonSelected = 6;
+  AutonSelected = 3;
   switch(AutonSelected) {
     case 1:
     // 1 red awp right
@@ -126,7 +126,7 @@ void autonomous(void) {
       // // elim red;
       isRed = true;
       // AwpPositive();
-      NegativeAWP();
+      SigSoloAWP();
       // SigSoloAWP();
       // TestColorSort();
       break;
@@ -145,19 +145,19 @@ void autonomous(void) {
     case 4:
       // 4 blue awp left
       isRed = false;
-      SetupAwp();
+      PositiveElimScrim();
       break;
     case 5:
-      isRed = false;
-      AwpPositive(); // 5 red elim right
+      isRed = true;
+      RedGoalRush();
       break;
     case 6:
       isRed = false;
-      GoalRush(); // 5 blue elim left
+      BlueGoalRush();
       break;
     case 7:
       isRed = true;
-      skills();
+      NegativeAWP();
       break;
     case 8:
       isRed = false;
@@ -188,7 +188,6 @@ double temp = 0;
 bool wrong_color = false;
 bool raising = false;
 int arm_click = 0;
-double arm_load_pos = 80;
 double arm_score_pos = 410;
 bool intake_back = false;
 
@@ -206,8 +205,8 @@ void intakeBack() {
 }
 
 void armToLoadPos() {
-  arm_motor.spinToPosition(arm_load_pos, deg, 100, velocityUnits::pct, true);
-  arm_motor.spinToPosition(arm_load_pos, deg, 50, velocityUnits::pct, true);
+  arm_motor.spinToPosition(arm_load_target, deg, 100, velocityUnits::pct, true);
+  arm_motor.spinToPosition(arm_load_target, deg, 50, velocityUnits::pct, true);
   Controller1.Screen.clearScreen();
   Controller1.Screen.setCursor(1, 1);
   Controller1.Screen.print("arm: %.2f", arm_motor.position(deg));
@@ -224,7 +223,7 @@ void armToScoreTh() {
 void usercontrol(void) {
   // thread icr = thread(intake_color_red);
   arm_stop.pressed(arm_touch);
-  arm_motor.setPosition(arm_load_pos - 7, deg);
+  arm_motor.setPosition(arm_load_target - 7, deg);
 
   // friction_test();
   Stop(coast);
@@ -291,12 +290,12 @@ void usercontrol(void) {
     }
 
     if(abs(Ch2) < 30 && Ch1 < -50){
-      if (!raising && fabs(arm_motor.position(deg) - arm_load_pos) > 10) {
+      if (!raising && fabs(arm_motor.position(deg) - arm_load_target) > 10) {
         raising = true;
         thread armToLoad = thread(armToLoadPos);
       }
     } else if(abs(Ch1) < 40 && Ch2 > 50) {
-      if (fabs(arm_motor.position(deg) - arm_load_pos) <= 25) {
+      if (fabs(arm_motor.position(deg) - arm_load_target) <= 25) {
         if (!intake_back) {
           intake_back = true;
           thread intakeBackThread = thread(intakeBack);
@@ -315,8 +314,10 @@ void usercontrol(void) {
     if(BtnY) {
     }
 
-    if (BtnU){
-    } else if (BtnR){
+    if (BtnU) {
+      intakeraise.set(false);
+    } else if (BtnR) {
+      intakeraise.set(true);
     }
 
     if (R2){
@@ -337,15 +338,15 @@ void usercontrol(void) {
     }
     
     if (BtnX){
-      intakeraise.set(true);
+      Doinker.set(true);
     }
     if (BtnY){
-      intakeraise.set(false);
+      Doinker.set(false);
     }
     if (BtnA){
-      Doinker.set(true);
+      cage.set(true);
     }else if(BtnB){
-      Doinker.set(false);
+      cage.set(false);
     }
     wait(10, msec); 
   }

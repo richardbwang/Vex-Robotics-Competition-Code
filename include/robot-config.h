@@ -25,6 +25,7 @@ extern motor_group arm_motor;
 extern rotation X;
 extern rotation Y;
 extern bumper arm_stop;
+extern digital_out cage;
 
 /**
  * Used to initialize code/tasks/devices added using tools in VEXcode Pro.

@@ -30,7 +30,7 @@ double correct_angle = 0, cx = 0, cy = 0;
 double distance_value = 35;
 double distancebetweenwheels = 12.3;
 double cp = 2;
-double arm_angle_target = 0, arm_pid_target = 0, arm_load_target = 80, arm_store_target = 250, arm_score_target = 470;
+double arm_angle_target = 0, arm_pid_target = 0, arm_load_target = 60, arm_store_target = 250, arm_score_target = 470;
 double rushsetupangle = -23;
 
 void ChassisControl(double left_power, double right_power) {
@@ -51,12 +51,12 @@ void intake(double inpower) {
 void intakeStuck() {
   int i = 0;
   while(true) {
-    if(targetIntakeVolts > 0 && intake_motor.velocity(rpm) <= 20) {
+    if(targetIntakeVolts > 0 && intake_motor.velocity(rpm) <= 5) {
       i++;
     } else {
       i = 0;
     }
-    if(i > 10) {
+    if(i > 40) {
       int prevTarget = targetIntakeVolts;
       intake(-12);
       targetIntakeVolts = prevTarget;
@@ -1186,23 +1186,26 @@ void trackodomwheel() {
   double previousHeading = to_rad(GetInertialHeading());
   double previousX = X.position(degrees);
   double previousY = Y.position(degrees);
-  double SidewaysTracker_center_distance = -0.734375;
+  double SidewaysTracker_center_distance = 2.71875;
   // (13-1/8)/2 , 6.5+1/16
-  double ForwardTracker_center_distance = 0.046875;
-  double tracker_diameter = 2;
+  double ForwardTracker_center_distance = -0.03125;
+  double Forward_tracker_diameter = 1.97;
+  double Sideways_tracker_diameter = 1.975;
 
   while(true) {
-    double Forward_delta = (Y.position(degrees) - previousY) * tracker_diameter * M_PI  / 360.0;
-    double Sideways_delta = (X.position(degrees) - previousX) * tracker_diameter * M_PI / 360.0;
+    double currentX = X.position(degrees);
+    double currentY = Y.position(degrees);
+    double Forward_delta = (currentY - previousY) * Forward_tracker_diameter * M_PI  / 360.0;
+    double Sideways_delta = (currentX - previousX) * Sideways_tracker_diameter * M_PI / 360.0;
     double newHeading = to_rad(GetInertialHeading());
     double orientation_delta_rad = newHeading - previousHeading;
-    previousX = X.position(degrees);
-    previousY = Y.position(degrees);
+    previousX = currentX;
+    previousY = currentY;
 
     double local_X_position;
     double local_Y_position;
 
-    if (fabs(orientation_delta_rad) < 1e-6) {
+    if (fabs(orientation_delta_rad) < 1e-9) {
       local_X_position = Sideways_delta;
       local_Y_position = Forward_delta;
     } else {
@@ -1214,7 +1217,7 @@ void trackodomwheel() {
     double local_polar_angle;
     double local_polar_length;
 
-    if (fabs(local_X_position) < 1e-6 && fabs(local_Y_position) < 1e-6){
+    if (fabs(local_X_position) < 1e-9 && fabs(local_Y_position) < 1e-9){
       local_polar_angle = 0;
       local_polar_length = 0;
     } else {
@@ -1885,7 +1888,7 @@ void arm_thread() {
 }
 
 void arm_pid(double arm_target) {
-  PID pidarm = PID(0.2, 0, 0.8);
+  PID pidarm = PID(0.1, 0, 0.5);
   pidarm.SetTarget(arm_target);
   pidarm.SetIntegralMax(0);  
   pidarm.SetIntegralRange(1);
